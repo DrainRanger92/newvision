@@ -114,7 +114,7 @@ curtain-reader/
 
 ## Milestones (порядок)
 
-- **M1** Skeleton: backend + bot + frontend запускаются, hello world
+- [x] **M1** Skeleton: backend + bot + frontend запускаются, hello world ✅ (dbbb98d, QWEN winner)
 - **M2** Parser: URL → массив блоков, кэш статей
 - **M3** Translation: LLM EN→RU, lazy + cache
 - **M4** Bot integration: URL → Mini App кнопка, end-to-end
@@ -141,6 +141,7 @@ curtain-reader/
 - [ ] Домен для Mini App — Mark даст перед M7
 - [ ] VPS провайдер — Hetzner? (предложение в плане M7)
 
-## Build & Test (после того как агенты выберут стек)
+## Build & Test
 
-(заполняется агентами в M1)
+- **M1**: Frontend `npm run build` ✅ (Vite + tsc), backend imports ✅ (FastAPI + aiogram)
+- Backend Python env needs clean venv setup (hermes-agent PYTHONPATH interferes)
