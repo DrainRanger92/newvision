@@ -1,3 +1,18 @@
+"""
+<MODULE_CONTRACT>
+name: db
+layer: Data
+depends: [models]
+responsibility: SQLite persistence for articles (M2) and future translations (M3+); aiosqlite async access
+contract: Thread-safe async access through a global connection; init_db() must be called once before any queries; close_db() releases the connection
+</MODULE_CONTRACT>
+
+<LINKS>
+- models: uses Article model for serialisation/deserialisation
+- main: called from FastAPI lifespan for init/close; CRUD from endpoints
+</LINKS>
+"""
+
 import json
 import logging
 from pathlib import Path

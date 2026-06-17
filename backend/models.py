@@ -1,3 +1,19 @@
+"""
+<MODULE_CONTRACT>
+name: models
+layer: Domain
+depends: []
+responsibility: Pydantic data models for articles, blocks, translation requests/responses
+contract: All models are self-validating via Pydantic; Block discriminated union covers all content types; serialisation is round-trip safe
+</MODULE_CONTRACT>
+
+<LINKS>
+- db: stores and retrieves Article objects via JSON serialisation
+- parser: produces Block instances from parsed HTML
+- main: API request/response models
+</LINKS>
+"""
+
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum

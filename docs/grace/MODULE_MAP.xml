@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MODULE_MAP.xml — GRACE Knowledge Graph for Curtain Reader (pre-M3 baseline)
+  Updated 2026-06-17
+-->
+<MODULE_MAP version="1.0" project="curtain-reader" updated="2026-06-17">
+
+  <module name="main" layer="Presentation">
+    <depends_on>config</depends_on>
+    <depends_on>db</depends_on>
+    <depends_on>models</depends_on>
+    <depends_on>parser</depends_on>
+    <depends_on>bot</depends_on>
+    <file>backend/main.py</file>
+  </module>
+
+  <module name="bot" layer="Presentation">
+    <depends_on>config</depends_on>
+    <file>backend/bot.py</file>
+  </module>
+
+  <module name="parser" layer="Application">
+    <depends_on>models</depends_on>
+    <depends_on>config</depends_on>
+    <file>backend/parser.py</file>
+  </module>
+
+  <module name="models" layer="Domain">
+    <file>backend/models.py</file>
+  </module>
+
+  <module name="config" layer="Data">
+    <file>backend/config.py</file>
+  </module>
+
+  <module name="db" layer="Data">
+    <depends_on>models</depends_on>
+    <file>backend/db.py</file>
+  </module>
+
+  <edges>
+    <edge from="main" to="config" type="configures-from" />
+    <edge from="main" to="db" type="initialises" />
+    <edge from="main" to="bot" type="starts-polling" />
+    <edge from="main" to="parser" type="calls" />
+    <edge from="main" to="models" type="uses" />
+    <edge from="bot" to="config" type="reads-settings" />
+    <edge from="parser" to="models" type="produces" />
+    <edge from="parser" to="config" type="reads-settings" />
+    <edge from="db" to="models" type="serialises" />
+  </edges>
+
+</MODULE_MAP>
