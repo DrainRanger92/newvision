@@ -114,7 +114,7 @@ curtain-reader/
 
 - [x] **M1** Skeleton: backend + bot + frontend запускаются, hello world ✅ (dbbb98d, QWEN winner)
 - [x] **M2** Parser: URL → массив блоков, кэш статей ✅ (257ba4b, DSV4 winner)
-- **M3** Translation: LLM EN→RU, lazy + cache
+- [x] **M3** Translation: LLM EN→RU, lazy + cache ✅ (8f7bcf2, DSV4Flash winner)
 - **M4** Bot integration: URL → Mini App кнопка, end-to-end
 - **M5** Curtain UX: touch swipe, snap, 60fps
 - **M6** Telegram theme + polish: light/dark, inline-code preserved
