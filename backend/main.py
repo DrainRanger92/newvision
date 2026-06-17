@@ -1,3 +1,22 @@
+"""
+<MODULE_CONTRACT>
+name: main
+layer: Presentation
+depends: [config, db, models, parser, translator, bot]
+responsibility: FastAPI application assembly — CORS, lifespan, endpoints (/health, /api/parse, /api/translate, /api/translate/batch, GET /api/articles/{id})
+contract: All endpoints return valid JSON; health always responds 200; parse and translate endpoints delegate to application-layer modules; lifespan manages db init/close and bot polling lifecycle
+</MODULE_CONTRACT>
+
+<LINKS>
+- config: uses settings for CORS origins, db_path, API keys
+- db: init_db() in lifespan; get_article_by_id, get_article_by_url, save_article in endpoints
+- models: ParseRequest, TranslateRequest, BatchTranslateRequest, TranslateResponse, BatchTranslateResponse, Article
+- parser: parse_article() for POST /api/parse
+- translator: translate_block(), translate_blocks_batch() for translate endpoints
+- bot: start_bot_polling() in lifespan
+</LINKS>
+"""
+
 import asyncio
 import logging
 import time

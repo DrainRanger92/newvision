@@ -1,3 +1,18 @@
+"""
+<MODULE_CONTRACT>
+name: bot
+layer: Presentation
+depends: [config]
+responsibility: Telegram bot with aiogram 3 — /start handler, polling lifecycle
+contract: Bot polling starts only when BOT_ENABLED=true and BOT_TOKEN is non-empty; router is import-safe (no side effects on import)
+</MODULE_CONTRACT>
+
+<LINKS>
+- config: reads bot_token and bot_enabled from settings
+- main: router included in FastAPI lifespan via start_bot_polling()
+</LINKS>
+"""
+
 import logging
 
 from aiogram import Bot, Dispatcher, Router
