@@ -1,0 +1,82 @@
+{
+  "M4-bot-integration": {
+    "read_only": [
+      "TZ.md",
+      "AGENTS.md",
+      "backend/models.py",
+      "backend/parser.py",
+      "backend/translator.py",
+      "backend/db.py",
+      "backend/config.py",
+      "backend/requirements.txt",
+      "docs/milestones/M1-skeleton.md",
+      "docs/milestones/M2-parser.md",
+      "docs/milestones/M3-translation.md",
+      "docs/milestones/M4-bot-integration.md"
+    ],
+    "read_write": [
+      "backend/bot.py",
+      "backend/main.py",
+      "frontend/src/"
+    ],
+    "context_summary": "Bot receives URL -> validates -> calls /api/parse -> returns Mini App button with article URL. Frontend Reader page fetches article from API and renders it."
+  },
+  "M5-curtain-ux": {
+    "read_only": [
+      "TZ.md",
+      "AGENTS.md",
+      "backend/main.py",
+      "backend/models.py",
+      "backend/parser.py",
+      "backend/translator.py",
+      "backend/db.py",
+      "backend/config.py",
+      "backend/bot.py",
+      "backend/requirements.txt",
+      "docs/milestones/M1-skeleton.md",
+      "docs/milestones/M2-parser.md",
+      "docs/milestones/M3-translation.md",
+      "docs/milestones/M4-bot-integration.md",
+      "docs/milestones/M5-curtain-ux.md"
+    ],
+    "read_write": [
+      "frontend/src/components/CurtainBlock.tsx",
+      "frontend/src/components/ArticleRenderer.tsx",
+      "frontend/src/hooks/useCurtain.ts",
+      "frontend/src/pages/Reader.tsx"
+    ],
+    "context_summary": "Touch swipe gesture on paragraph blocks. Swipe up ~30% -> block snaps to translated state showing Russian text. Swipe down -> snaps back to English. Code blocks are inert. 60fps animation with Framer Motion."
+  },
+  "M6-theme-polish": {
+    "read_only": [
+      "TZ.md",
+      "AGENTS.md",
+      "backend/",
+      "frontend/src/components/CurtainBlock.tsx",
+      "frontend/src/pages/Reader.tsx",
+      "docs/milestones/"
+    ],
+    "read_write": [
+      "frontend/src/styles/",
+      "frontend/src/components/CodeBlock.tsx",
+      "frontend/src/hooks/useTranslation.ts"
+    ],
+    "context_summary": "Auto-detect Telegram theme (light/dark) via @twa-dev/sdk. Apply CSS variables for colors. Inline-code inside paragraphs preserved (not translated). Syntax highlight code blocks."
+  },
+  "M7-deploy": {
+    "read_only": [
+      "TZ.md",
+      "AGENTS.md",
+      "backend/",
+      "frontend/src/",
+      "docs/milestones/"
+    ],
+    "read_write": [
+      "docker-compose.yml",
+      "backend/Dockerfile",
+      "frontend/Dockerfile",
+      "docs/deploy/"
+    ],
+    "context_summary": "VPS deployment: backend on VPS (Docker with uvicorn), frontend on Vercel (static build). HTTPS via reverse proxy. Smoke test on real mobile device in Telegram."
+  }
+}

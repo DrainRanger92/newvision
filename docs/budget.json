@@ -1,0 +1,130 @@
+[
+  {
+    "cycle_id": "M4-bot-integration",
+    "provider": "deepseek-api",
+    "mode": "economy",
+    "started_at": null,
+    "completed_at": null,
+    "phases": {
+      "architect": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "build": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "validate": {
+        "agents": [],
+        "total_token_cost": 0.0
+      }
+    },
+    "total_token_cost": 0.0,
+    "total_compute_minutes": 0.0,
+    "compute_cost": 0.0,
+    "total_cost": 0.0,
+    "accepted_prs": 0,
+    "cost_per_accepted_change": 0.0,
+    "gates": {},
+    "failures": [],
+    "logcraft_report": null,
+    "winner_branch": null,
+    "winner_commit": null
+  },
+  {
+    "cycle_id": "M5-curtain-ux",
+    "provider": "deepseek-api",
+    "mode": "full_race",
+    "started_at": null,
+    "completed_at": null,
+    "phases": {
+      "architect": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "build": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "validate": {
+        "agents": [],
+        "total_token_cost": 0.0
+      }
+    },
+    "total_token_cost": 0.0,
+    "total_compute_minutes": 0.0,
+    "compute_cost": 0.0,
+    "total_cost": 0.0,
+    "accepted_prs": 0,
+    "cost_per_accepted_change": 0.0,
+    "gates": {},
+    "failures": [],
+    "logcraft_report": null,
+    "winner_branch": null,
+    "winner_commit": null
+  },
+  {
+    "cycle_id": "M6-theme-polish",
+    "provider": "deepseek-api",
+    "mode": "economy",
+    "started_at": null,
+    "completed_at": null,
+    "phases": {
+      "architect": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "build": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "validate": {
+        "agents": [],
+        "total_token_cost": 0.0
+      }
+    },
+    "total_token_cost": 0.0,
+    "total_compute_minutes": 0.0,
+    "compute_cost": 0.0,
+    "total_cost": 0.0,
+    "accepted_prs": 0,
+    "cost_per_accepted_change": 0.0,
+    "gates": {},
+    "failures": [],
+    "logcraft_report": null,
+    "winner_branch": null,
+    "winner_commit": null
+  },
+  {
+    "cycle_id": "M7-deploy",
+    "provider": "deepseek-api",
+    "mode": "economy",
+    "started_at": null,
+    "completed_at": null,
+    "phases": {
+      "architect": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "build": {
+        "agents": [],
+        "total_token_cost": 0.0
+      },
+      "validate": {
+        "agents": [],
+        "total_token_cost": 0.0
+      }
+    },
+    "total_token_cost": 0.0,
+    "total_compute_minutes": 0.0,
+    "compute_cost": 0.0,
+    "total_cost": 0.0,
+    "accepted_prs": 0,
+    "cost_per_accepted_change": 0.0,
+    "gates": {},
+    "failures": [],
+    "logcraft_report": null,
+    "winner_branch": null,
+    "winner_commit": null
+  }
+]

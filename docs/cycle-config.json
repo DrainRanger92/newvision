@@ -1,0 +1,12 @@
+{
+  "max_cycle_cost": 5.00,
+  "max_cycle_minutes": 30,
+  "max_agent_retries": 2,
+  "required_gates": ["G1", "G2", "G3", "G4", "G8", "G9", "G12"],
+  "stop_on": {
+    "all_architects_fail": true,
+    "all_builders_fail": true,
+    "consecutive_gate_failures": 3,
+    "provider_balance_empty": true
+  }
+}
