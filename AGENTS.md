@@ -115,7 +115,7 @@ curtain-reader/
 ## Milestones (порядок)
 
 - [x] **M1** Skeleton: backend + bot + frontend запускаются, hello world ✅ (dbbb98d, QWEN winner)
-- **M2** Parser: URL → массив блоков, кэш статей
+- [x] **M2** Parser: URL → массив блоков, кэш статей ✅ (257ba4b, DSV4 winner)
 - **M3** Translation: LLM EN→RU, lazy + cache
 - **M4** Bot integration: URL → Mini App кнопка, end-to-end
 - **M5** Curtain UX: touch swipe, snap, 60fps
@@ -144,4 +144,5 @@ curtain-reader/
 ## Build & Test
 
 - **M1**: Frontend `npm run build` ✅ (Vite + tsc), backend imports ✅ (FastAPI + aiogram)
+- **M2**: Parser ✅ (DSV4 winner): POST /api/parse → 416 blocks, cache hit < 50ms, /health preserved
 - Backend Python env needs clean venv setup (hermes-agent PYTHONPATH interferes)
