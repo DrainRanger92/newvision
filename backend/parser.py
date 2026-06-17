@@ -166,7 +166,7 @@ def _classify_element(el: Tag) -> list[Block]:
             if content.strip():
                 blocks.append(CodeBlock(content=content, language=lang))
 
-    elif tag in ("div", "section", "article"):
+    elif tag in ("div", "section", "article", "html", "body"):
         for child in list(el.children):
             blocks.extend(_classify_element(child))
 

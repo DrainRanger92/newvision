@@ -90,3 +90,26 @@ class ArticleResponse(BaseModel):
     title: str
     blocks: list[Block] = []
     fetched_at: datetime
+
+
+class TranslateRequest(BaseModel):
+    article_id: str
+    block_index: int
+
+
+class BatchTranslateRequest(BaseModel):
+    article_id: str
+    block_indices: list[int]
+
+
+class TranslateResponse(BaseModel):
+    article_id: str
+    block_index: int
+    block_type: BlockType
+    translated_text: str
+    cached: bool
+    error: bool = False
+
+
+class BatchTranslateResponse(BaseModel):
+    translations: list[TranslateResponse]

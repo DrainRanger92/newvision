@@ -10,8 +10,18 @@ from fastapi.responses import JSONResponse
 from backend.bot import start_bot_polling
 from backend.config import settings
 from backend.db import close_db, get_article_by_id, get_article_by_url, init_db, save_article
-from backend.models import Article, ParseRequest
+from backend.models import (
+    Article,
+    BatchTranslateRequest,
+    BatchTranslateResponse,
+    Block,
+    BlockType,
+    ParseRequest,
+    TranslateRequest,
+    TranslateResponse,
+)
 from backend.parser import ParseError, parse_article
+from backend.translator import TranslationError, translate_block, translate_blocks_batch
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,3 +93,86 @@ async def api_get_article(article_id: str) -> Article:
     if article is None:
         raise HTTPException(status_code=404, detail="Article not found")
     return article
+
+
+@app.post("/api/translate")
+async def api_translate(req: TranslateRequest) -> TranslateResponse:
+    article = await get_article_by_id(req.article_id)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    if req.block_index < 0 or req.block_index >= len(article.blocks):
+        raise HTTPException(status_code=400, detail="Block index out of range")
+
+    block = article.blocks[req.block_index]
+    if block.type in (BlockType.code, BlockType.image):
+        raise HTTPException(status_code=400, detail=f"Block type '{block.type}' cannot be translated")
+
+    logger.info("[Translator] POST /api/translate article=%s block=%d", req.article_id, req.block_index)
+
+    try:
+        translated_text, cached, error = await translate_block(
+            req.article_id, req.block_index, block, settings.deepseek_api_key, settings.translation_model,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except TranslationError:
+        logger.warning("[Translator] Translation failed for article=%s block=%d", req.article_id, req.block_index)
+        raise HTTPException(status_code=503, detail="Translation service unavailable")
+
+    return TranslateResponse(
+        article_id=req.article_id,
+        block_index=req.block_index,
+        block_type=block.type,
+        translated_text=translated_text,
+        cached=cached,
+        error=error,
+    )
+
+
+@app.post("/api/translate/batch")
+async def api_translate_batch(req: BatchTranslateRequest) -> BatchTranslateResponse:
+    if len(req.block_indices) > 10:
+        raise HTTPException(status_code=400, detail="Batch size exceeds maximum of 10 blocks")
+
+    article = await get_article_by_id(req.article_id)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    valid_blocks: list[tuple[int, Block]] = []
+    for idx in req.block_indices:
+        if idx < 0 or idx >= len(article.blocks):
+            logger.warning("[Translator] Block index %d out of range, skipping", idx)
+            continue
+        block = article.blocks[idx]
+        if block.type in (BlockType.code, BlockType.image):
+            logger.warning("[Translator] Skipping block %d (type=%s)", idx, block.type)
+            continue
+        valid_blocks.append((idx, block))
+
+    if not valid_blocks:
+        raise HTTPException(status_code=400, detail="No valid translatable blocks in request")
+
+    logger.info("[Translator] POST /api/translate/batch article=%s blocks=%s", req.article_id, valid_blocks)
+
+    try:
+        results = await translate_blocks_batch(
+            req.article_id, valid_blocks, settings.deepseek_api_key, settings.translation_model,
+        )
+    except TranslationError:
+        logger.warning("[Translator] Batch translation failed for article=%s", req.article_id)
+        raise HTTPException(status_code=503, detail="Translation service unavailable")
+
+    translations = [
+        TranslateResponse(
+            article_id=req.article_id,
+            block_index=idx,
+            block_type=article.blocks[idx].type,
+            translated_text=text,
+            cached=cached,
+            error=error,
+        )
+        for idx, text, cached, error in results
+    ]
+
+    return BatchTranslateResponse(translations=translations)
