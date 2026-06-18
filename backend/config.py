@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     fetch_max_bytes: int = 10_000_000
     deepseek_api_key: str = ""
     translation_model: str = "deepseek-chat"
+    mini_app_url: str = "http://localhost:5173"
 
 
 settings = Settings()

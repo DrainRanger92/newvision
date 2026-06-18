@@ -1,0 +1,52 @@
+Контекст:
+Проект NewVision (ранее Curtain Reader) — Telegram Mini App для чтения английских технических статей с переводом.
+GitHub: DrainRanger92/newvision, ветка main.
+
+Текущее состояние:
+- M1 ✅ Skeleton (FastAPI + aiogram 3 bot + React TS frontend)
+- M2 ✅ Parser (URL → блоки, SQLite кэш)
+- M3 ✅ Translation (DeepSeek API EN→RU, lazy cache)
+- M4 ⏳ Bot integration (текущая задача)
+- M5 ⏳ Curtain UX (touch swipe) — НЕ ТРОГАТЬ
+
+Архитектура:
+- backend/: FastAPI приложение (Python/aiogram 3), frontend/: React 18 + Vite + TS
+
+Техстек:
+- Backend: Python 3.11+, FastAPI, aiogram 3.x, SQLite (aiosqlite), DeepSeek API
+- Frontend: React 18, TypeScript, Vite, @twa-dev/sdk
+
+Порядок:
+1. Прочитай весь существующий код
+2. Спроектируй изменения
+3. Реализуй backend (bot.py, config.py, main.py)
+4. Реализуй frontend (Reader.tsx, api.ts, App.tsx, main.tsx, package.json)
+5. Обнови документацию (README.md, .env.example)
+6. Проверь: npm install && tsc -b
+
+Проблема:
+M4 — интеграция бота с Mini App. Сейчас бот отвечает только на /start.
+Нужен сквозной сценарий: пользователь кидает URL → бот парсит через POST /api/parse → WebAppInfo кнопка → Mini App открывает и рендерит статью.
+
+Изменения:
+1. bot.py: хендлер URL-сообщений (F.text, url regex) → /api/parse → InlineKeyboardMarkup с WebAppInfo кнопкой "📖 Open in Reader". WebApp URL = config.mini_app_url + "/#/reader/" + article_id. Старое имя "Curtain Reader" → "NewVision".
+2. config.py: добавить mini_app_url: str = "http://localhost:5173"
+3. main.py: title "NewVision API"
+4. frontend: react-router-dom (HashRouter), Router.tsx с "/" (welcome) и "/reader/:id" (Reader), api.ts (fetchArticle), Reader.tsx (рендер блоков), main.tsx (BrowserRouter→HashRouter)
+5. README.md: название NewVision, M1-M4 [x], секция MINI_APP_URL
+6. .env.example: MINI_APP_URL=http://localhost:5173
+
+ВАЖНО: НЕ трогать M5 (curtain UX/swipe/60fps).
+
+Критерии успеха:
+1. bot.py: URL→parse→WebAppInfo кнопка
+2. Reader.tsx: загружает и рендерит статью по article_id из useParams(), поддерживает text/code/heading/list/quote блоки
+3. HashRouter: "/" и "/reader/:id"
+4. api.ts: fetchArticle(id) типизированный
+5. main.py: "NewVision API"
+6. README.md: NewVision, M1-M4 [x], MINI_APP_URL
+7. .env.example: MINI_APP_URL
+8. config.py: mini_app_url
+9. package.json: react-router-dom + "newvision-frontend"
+10. npm install && tsc -b без ошибок
+11. git add -A && git commit -m "feat(m4): bot integration — URL → Mini App end-to-end"
