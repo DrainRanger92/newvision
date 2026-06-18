@@ -1,14 +1,15 @@
-# AGENTS.md — Curtain Reader
+# AGENTS.md — NewVision
 
 Telegram Mini App для чтения английских технических статей с inline-переводом.
 Жест «шторка» — свайп вверх по абзацу reveals перевод.
 
 ## Repository
 
-- **Project root**: this directory (`~/Documents/curtain-reader/`)
+- **Repository**: `github.com/DrainRanger92/newvision`
 - **ТЗ (source of truth)**: `TZ.md` — лишено техники, только цели/UX/перфоманс
-- **Obsidian index**: `~/Documents/Obsidian Vault/pet/curtain-reader/_index.md`
+- **Obsidian index**: `pet/curtain-reader/_index.md` (в vault)
 - **Workflow**: agentic loop — plan → build (3 модели race) → validator → repeat
+- **Cloud-first**: код живёт на GitHub, агенты клонируют/пушат через MCP
 
 ## Tech Stack (chosen by agent — TZ doesn't mandate)
 
@@ -129,7 +130,7 @@ Max retries per build slot: 2 (from `docs/cycle-config.json`).
 ## Project Structure (target)
 
 ```
-curtain-reader/
+newvision/
 ├── AGENTS.md                         # This file
 ├── TZ.md                             # Source of truth (no tech details)
 ├── README.md                         # Human-friendly intro
