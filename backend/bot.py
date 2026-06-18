@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
+from aiogram.utils.markdown import quote_html
 
 from backend.config import settings
 
@@ -66,6 +67,10 @@ async def handle_url(message: Message) -> None:
         logger.warning("[Bot] Parse failed for %s: %s", url, e)
         await message.answer(f"❌ Failed to parse: {e}")
         return
+    except Exception as e:
+        logger.error("[Bot] Unexpected error parsing %s: %s", url, e)
+        await message.answer("❌ An unexpected error occurred while parsing the article.")
+        return
 
     web_app_url = f"{settings.mini_app_url}/#/reader/{article.id}"
     keyboard = InlineKeyboardMarkup(
@@ -79,33 +84,9 @@ async def handle_url(message: Message) -> None:
         ],
     )
 
+    safe_title = quote_html(title)
     await message.answer(
-        f"✅ *{title}*\n\nParsed successfully. Open in Mini App to read.",
+        f"✅ *{safe_title}*\n\nParsed successfully. Open in Mini App to read.",
         reply_markup=keyboard,
-        parse_mode="Markdown",
+        parse_mode="MarkdownV2",
     )
-
-
-def create_bot() -> Bot:
-    return Bot(token=settings.bot_token)
-
-
-def create_dispatcher() -> Dispatcher:
-    dp = Dispatcher()
-    dp.include_router(router)
-    return dp
-
-
-async def start_bot_polling() -> None:
-    if not settings.bot_enabled:
-        logger.info("[Bot] Bot is disabled (BOT_ENABLED=false). Skipping polling.")
-        return
-
-    if not settings.bot_token:
-        logger.warning("[Bot] BOT_TOKEN is empty. Bot will not start.")
-        return
-
-    logger.info("[Bot] Starting bot polling...")
-    bot = create_bot()
-    dp = create_dispatcher()
-    await dp.start_polling(bot)

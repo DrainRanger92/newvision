@@ -2,6 +2,15 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchArticle, type Article } from "../services/api";
 
+function sanitizeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export default function Reader() {
   const { id } = useParams<{ id: string }>();
   const [article, setArticle] = useState<Article | null>(null);
@@ -43,23 +52,29 @@ export default function Reader() {
 function BlockRenderer({ block }: { block: Article["blocks"][number] }) {
   switch (block.type) {
     case "heading": {
-      const Tag = `h${block.level}` as keyof JSX.IntrinsicElements;
-      return <Tag dangerouslySetInnerHTML={{ __html: block.content }} />;
+      const level = Math.min(Math.max(block.level, 1), 6);
+      const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+      const html = sanitizeHtml(block.content);
+      return <Tag dangerouslySetInnerHTML={{ __html: html }} />;
     }
-    case "paragraph":
-      return <p dangerouslySetInnerHTML={{ __html: block.content }} />;
+    case "paragraph": {
+      const html = sanitizeHtml(block.content);
+      return <p dangerouslySetInnerHTML={{ __html: html }} />;
+    }
     case "code":
       return (
         <pre>
           <code>{block.content}</code>
         </pre>
       );
+    case "image":
+      return <img src={block.src} alt={block.alt} style={{ maxWidth: "100%" }} />;
     case "list":
       if (block.ordered) {
         return (
           <ol>
             {block.items.map((item, i) => (
-              <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+              <li key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(item) }} />
             ))}
           </ol>
         );
@@ -67,12 +82,14 @@ function BlockRenderer({ block }: { block: Article["blocks"][number] }) {
       return (
         <ul>
           {block.items.map((item, i) => (
-            <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+            <li key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(item) }} />
           ))}
         </ul>
       );
-    case "quote":
-      return <blockquote dangerouslySetInnerHTML={{ __html: block.content }} />;
+    case "quote": {
+      const html = sanitizeHtml(block.content);
+      return <blockquote dangerouslySetInnerHTML={{ __html: html }} />;
+    }
     default:
       return null;
   }
