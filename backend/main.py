@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="NewVision API",
+    title="Curtain Reader API",
     version="0.1.0",
     lifespan=lifespan,
 )
