@@ -27,17 +27,20 @@ GitHub branch protection — **единственный жёсткий gate** п
 | Block force pushes | ✅ | Нет `--force` в main |
 | Block deletions | ✅ | Ветку main нельзя удалить |
 
-### Two-Token Architecture (Planned)
+### Two-Token Architecture (Active)
 
-Для обхода self-approve блокировки GitHub (автор PR ≠ reviewer):
+Обязательное требование: Hermes/OpenCode выполняет ВСЕ git-операции (commit, push, создание PR)
+только от dev-аккаунта **newoxygensolutions92**. Mark (DrainRanger92) — только approve и merge.
+Любой коммит от DrainRanger92 в feature-ветке — нарушение. Такой PR закрывается
+и пересоздаётся от dev-аккаунта.
 
 | Роль | Аккаунт | PAT | Что делает |
 |------|---------|-----|-----------|
 | 👑 Admin | `DrainRanger92` | Mark's personal PAT | Approve, merge, настройки репо, CI |
-| 🤖 Bot | `newvision-bot` | Fine-Grained PAT (Contents:write, Pull requests:write) | OpenCode → создаёт ветки, коммитит, открывает PR |
+| 🤖 Dev | `newoxygensolutions92` | `$GITHUB_DEV_PAT` (ghp_..., classic 40-char) | Hermes/OpenCode: создаёт ветки, коммитит, открывает PR |
 
 **Принцип работы:**
-- OpenCode/Hermes использует `GITHUB_PAT` от `newvision-bot` → PR создаётся от бота
+- Hermes/OpenCode использует `$GITHUB_DEV_PAT` от `newoxygensolutions92` → PR создаётся от dev-аккаунта
 - Mark аппрувит своим админ-токеном → GitHub видит двух разных людей ✅
 - Branch protection гарантирует: 1 approve + 2 CI checks → только тогда merge
 
@@ -441,8 +444,15 @@ These checks are safe to skip locally — they only matter in CI:
 9. **Никаких DeepL/OpenRouter** — только OpenCode Go модели.
 10. **Блокирующие вопросы — спрашивать сразу**, не молча выбирать запасной путь.
 11. **Любой PR → ревью перед мержем**. Даже «очевидные» изменения (YAML, README). Merge только после явного OK.
-12. **Тесты != «должны пройти»**. Каждый тест проверяется локально. Если тест падает — разобраться: реальный баг или платформенный gap (ENV-007). Не списывать на «на линуксе пройдёт» без доказательств.
-13. **Никаких хардкодных адресов инфраструктуры**. Адреса внешних сервисов (API URL, Mini App URL, DB path) — только через конфигурацию: `pydantic-settings` для Python backend, `VITE_` env vars для Vite frontend. Никаких зашитых строк `/api`, `localhost:8000` и т.д. в коде. Default-значения допустимы только как fallback при отсутствии переменной.
+14. **TypeScript Strict Mode — zero tolerance**. Перед написанием любого frontend-кода — прочитать
+    `frontend/tsconfig.json`. Если включены `noUncheckedIndexedAccess` / `noUnusedLocals` /
+    `noUnusedParameters` / `strict: true` — писать код, который проходит `tsc -b` **с первого раза**.
+    Каждый доступ по индексу (`arr[i]`, `obj[k]`) требут null-guard. Каждый импорт — используется.
+    CI gate G15 существует именно для этого. Не полагаться на CI как на первую линию обороны.
+
+15. **Pre-build verification**. Перед любым push — локально запустить `npm run build` (frontend)
+    и `PYTHONPATH=backend python -m pytest` (backend). Если build или тесты падают — чинить до push-а.
+    CI должен найти ноль новых ошибок. Единственное исключение — платформенные gap-ы (ENV-007).
 
 ## Open Questions (собираем здесь)
 
