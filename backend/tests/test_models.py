@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from backend.models import (
     Article,
+    ArticleResponse,
     BatchTranslateRequest,
     BatchTranslateResponse,
     Block,
@@ -239,7 +240,7 @@ class TestParseRequest:
 
     def test_valid_url(self) -> None:
         req = ParseRequest(url="https://example.com/article")
-        assert str(req.url) == "https://example.com/article/"
+        assert str(req.url) == "https://example.com/article"
 
     def test_invalid_url_raises(self) -> None:
         with pytest.raises(ValidationError):

@@ -5,7 +5,6 @@ Tests for backend/config.py — Settings model defaults and environment variable
 import os
 from unittest.mock import patch
 
-import pytest
 
 
 class TestSettingsDefaults:

@@ -10,7 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 from openai import AsyncOpenAI
 
-from backend.models import Block, BlockType, CodeBlock, HeadingBlock, ImageBlock, ListBlock, ParagraphBlock, QuoteBlock
+from backend.models import Block, CodeBlock, HeadingBlock, ImageBlock, ListBlock, ParagraphBlock, QuoteBlock
 
 logger = logging.getLogger(__name__)
 

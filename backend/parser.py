@@ -7,7 +7,6 @@ import re
 from urllib.parse import urlparse
 
 import httpx
-import lxml.html
 from bs4 import BeautifulSoup, Tag
 from readability import Document
 
