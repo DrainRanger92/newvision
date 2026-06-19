@@ -3,28 +3,34 @@
  *
  * Renders article blocks, routing translatable blocks
  * (heading h2-h6, paragraph, list, quote) through CurtainBlock
- * and non-translatable blocks (code, image, h1) directly.
+ * and non-translatable blocks (code, image) directly.
+ * Integrates preloading via IntersectionObserver sentinel.
  */
 
 import DOMPurify from "dompurify";
 import type { Article, Block, HeadingBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import CurtainBlock from "./CurtainBlock";
+import { usePreload } from "../hooks/usePreload";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface Props {
   article: Article;
 }
 
-function sanitizeHtml(text: string): string {
-  return DOMPurify.sanitize(text, { ADD_ATTR: ["target"] });
-}
-
 export default function ArticleRenderer({ article }: Props) {
-  const isTitle = (block: Block, index: number): boolean => {
-    if (block.type === "heading" && (block as HeadingBlock).level === 1) {
-      return true;
-    }
-    return index === 0 && block.type === "heading";
+  const { preloadTranslations } = useTranslation();
+
+  const { sentinelRef } = usePreload(
+    article.id,
+    article.blocks,
+    article.blocks.length - 1,
+    preloadTranslations,
+    isTranslatable
+  );
+
+  const isTitle = (block: Block): boolean => {
+    return block.type === "heading" && (block as HeadingBlock).level === 1;
   };
 
   return (
@@ -32,12 +38,8 @@ export default function ArticleRenderer({ article }: Props) {
       <h1 className="article-title">{article.title}</h1>
       <div className="article-blocks">
         {article.blocks.map((block, index) => {
-          if (isTitle(block, index)) {
-            return (
-              <h1 key={index} className="article-title">
-                {block.content}
-              </h1>
-            );
+          if (isTitle(block)) {
+            return null;
           }
 
           if (isTranslatable(block)) {
@@ -53,6 +55,7 @@ export default function ArticleRenderer({ article }: Props) {
 
           return <DirectBlockRenderer key={index} block={block} />;
         })}
+        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
       </div>
     </article>
   );

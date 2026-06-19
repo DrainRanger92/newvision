@@ -1,7 +1,8 @@
 /**
  * # @module: usePreload
  * IntersectionObserver-based translation preloader.
- * When the last visible CurtainBlock enters viewport,
+ * Returns a sentinelRef to attach to the last block.
+ * When sentinel enters viewport (200px margin),
  * debounced 300ms → preload next 3 untranslated blocks.
  */
 
@@ -10,6 +11,7 @@ import type { Block } from "../services/api";
 
 const DEBOUNCE_MS = 300;
 const LOOK_AHEAD = 3;
+const ROOT_MARGIN = "200px";
 
 export function usePreload(
   articleId: string,
@@ -18,6 +20,7 @@ export function usePreload(
   preloadFn: (articleId: string, indices: number[]) => Promise<void>,
   isTranslatableFn: (block: Block) => boolean
 ) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preloadedRef = useRef<Set<number>>(new Set());
 
@@ -51,6 +54,23 @@ export function usePreload(
   }, [articleId]);
 
   useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          schedulePreload();
+        }
+      },
+      { rootMargin: ROOT_MARGIN }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [schedulePreload]);
+
+  useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -58,5 +78,5 @@ export function usePreload(
     };
   }, []);
 
-  return { schedulePreload };
+  return { sentinelRef };
 }

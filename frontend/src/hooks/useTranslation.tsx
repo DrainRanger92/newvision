@@ -1,12 +1,16 @@
 /**
  * # @module: useTranslation
  * React Context providing a shared translation cache.
- * Uses Map<string, string> keyed by `articleId:${blockIndex}`.
+ * Uses Map<string, string> keyed by `articleId:blockIndex`.
  * Deduplicates in-flight requests via pending Promise map.
+ * Preloading uses batch endpoint for efficiency.
  */
 
 import React, { createContext, useContext, useCallback, useRef } from "react";
-import { fetchBlockTranslation } from "../services/api";
+import {
+  fetchBlockTranslation,
+  fetchBlockTranslationBatch,
+} from "../services/api";
 
 interface TranslationContextValue {
   getTranslation: (articleId: string, blockIndex: number) => Promise<string>;
@@ -71,11 +75,16 @@ export function TranslationProvider({
 
       if (uncached.length === 0) return;
 
-      await Promise.allSettled(
-        uncached.map((i) => getTranslation(articleId, i))
-      );
+      try {
+        const texts = await fetchBlockTranslationBatch(articleId, uncached);
+        texts.forEach((text, j) => {
+          cache.current.set(`${articleId}:${uncached[j]}`, text);
+        });
+      } catch {
+        // Fire-and-forget: failures are non-critical for preloading
+      }
     },
-    [getTranslation]
+    []
   );
 
   return React.createElement(
