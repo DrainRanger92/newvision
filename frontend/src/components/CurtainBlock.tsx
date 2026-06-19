@@ -8,7 +8,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
-import type { Block, HeadingBlock, ListBlock, QuoteBlock } from "../services/api";
+import type { Block, HeadingBlock, ListBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import { useCurtain, SNAP_DURATION_MS } from "../hooks/useCurtain";
 import { useTranslation } from "../hooks/useTranslation";
