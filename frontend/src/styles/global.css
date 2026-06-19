@@ -17,6 +17,7 @@ body {
   line-height: 1.6;
   color: var(--tg-text-color, #1a1a1a);
   background-color: var(--tg-bg-color, #ffffff);
+  overscroll-behavior: contain;
 }
 
 .app {
@@ -25,7 +26,7 @@ body {
   padding: 1rem;
 }
 
-/* ── Telegram theme CSS variables (applied via JS, fallbacks for browser) ── */
+/* ── Telegram theme CSS variables ── */
 
 :root {
   --tg-bg-color: #ffffff;
@@ -198,4 +199,61 @@ body {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ── M5: Curtain UX ── */
+
+.curtain-container {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: layout style paint;
+  min-height: 44px;
+}
+
+.curtain-original {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.curtain-translation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  opacity: 0;
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--tg-hint-color, #666);
+  font-style: italic;
+  transition: opacity 200ms ease-out;
+}
+
+.curtain-translation.visible {
+  opacity: 1;
+}
+
+.curtain-spinner {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2px solid var(--tg-secondary-bg-color, #f0f0f0);
+  border-top-color: var(--tg-link-color, #2481cc);
+  border-radius: 50%;
+  animation: curtain-spin 0.6s linear infinite;
+  margin: 0.5rem auto;
+}
+
+@keyframes curtain-spin {
+  to { transform: rotate(360deg); }
+}
+
+.curtain-error {
+  color: #e74c3c;
+  font-style: italic;
+  font-size: 0.9rem;
 }
