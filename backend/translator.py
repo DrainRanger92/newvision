@@ -1,17 +1,5 @@
 """
-<MODULE_CONTRACT>
-name: translator
-layer: Application
-depends: [models, db]
-responsibility: LLM-based EN→RU translation with code-tag preservation, caching, and batch optimisation
-contract: Code tags (<code>...</code>) are extracted before translation and restored after; translations are cached via db module keyed by (article_id, block_index, text_hash); single-block latency <1.5s; batch translates N blocks in one LLM call
-</MODULE_CONTRACT>
-
-<LINKS>
-- models: uses Block discriminated union; BlockType.code and BlockType.image are rejected
-- db: uses get_translation, save_translation, get_translations_batch for cache layer
-- config: reads deepseek_api_key and translation_model from settings (via callers)
-</LINKS>
+# @module: translator
 """
 
 import hashlib

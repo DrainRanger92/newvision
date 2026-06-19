@@ -1,18 +1,5 @@
 """
-<MODULE_CONTRACT>
-name: models
-layer: Domain
-depends: []
-responsibility: Pydantic data models for articles, blocks, translation requests/responses
-contract: All models are self-validating via Pydantic; Block discriminated union covers all content types; serialisation is round-trip safe
-</MODULE_CONTRACT>
-
-<LINKS>
-- db: stores and retrieves Article objects via JSON serialisation
-- parser: produces Block instances from parsed HTML
-- translator: uses Block discriminated union for type-gating translate/not translate
-- main: uses TranslateRequest/TranslateResponse for API endpoints
-</LINKS>
+# @module: models
 """
 
 import uuid

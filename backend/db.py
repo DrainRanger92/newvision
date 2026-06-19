@@ -1,17 +1,5 @@
 """
-<MODULE_CONTRACT>
-name: db
-layer: Data
-depends: [models]
-responsibility: SQLite persistence for articles and translations via aiosqlite
-contract: Thread-safe async access through a global connection; init_db() must be called once before any queries; close_db() releases the connection
-</MODULE_CONTRACT>
-
-<LINKS>
-- models: uses Article model for serialisation/deserialisation
-- main: called from FastAPI lifespan for init/close; CRUD from endpoints
-- translator: uses get_translation, save_translation, get_translations_batch for cache layer
-</LINKS>
+# @module: db
 """
 
 import hashlib
