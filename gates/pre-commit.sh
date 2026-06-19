@@ -5,7 +5,7 @@
 
 set -e
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || echo "$(cd "$(dirname "$0")/.." && pwd)")"
 GATES_DIR="$ROOT_DIR/gates"
 
 echo "🔍 Pre-commit: running fast checks..."
