@@ -64,6 +64,7 @@ export function useCurtain(
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
+    if (!touch) return;
     startY.current = touch.clientY;
     startX.current = touch.clientX;
     startOffset.current = offsetRef.current;
@@ -74,8 +75,9 @@ export function useCurtain(
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.touches[0];
-      const dy = startY.current - touch.clientY;
+      if (!touch) return;
 
+      const dy = startY.current - touch.clientY;
       if (Math.abs(dy) <= DEAD_ZONE) return;
 
       const dx = Math.abs(startX.current - touch.clientX);
@@ -112,9 +114,11 @@ export function useCurtain(
     if (velocityPoints.length >= 2) {
       const first = velocityPoints[0];
       const last = velocityPoints[velocityPoints.length - 1];
-      const dt = last.t - first.t;
-      if (dt > 0) {
-        signedVelocity = (first.y - last.y) / dt;
+      if (first && last) {
+        const dt = last.t - first.t;
+        if (dt > 0) {
+          signedVelocity = (first.y - last.y) / dt;
+        }
       }
     }
 
