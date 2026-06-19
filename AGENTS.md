@@ -350,6 +350,7 @@ After every cycle, LogCraft produces a report at `docs/logcraft/{cycle-id}-repor
 | `ENV-002` | Balance empty | HTTP 402 |
 | `ENV-003` | Port occupied | `[Errno 10048]` |
 | `ENV-006` | env_file path wrong | `.env` vs `backend/.env` |
+| **`ENV-007`** | **Platform gap** | **Test passes on Linux CI, fails on Windows (dev env). See § Platform Environment.** |
 | `CODE-001` | Type/import error | `AttributeError` |
 | `CODE-004` | Missing critical code | No `TRANSLATION_SYSTEM_PROMPT` |
 | `CODE-005` | Smoke test skipped | No gate log |
@@ -363,6 +364,35 @@ Full taxonomy: `docs/loopcraft/LOGCRAFT-SKILL.md` §3.
 The 10 failures from M3 are pre-classified in `docs/loopcraft/LOGCRAFT-SKILL.md` §4.
 LogCraft cross-references new failures against this archive to detect recurring patterns.
 
+## Platform Environment Awareness (Windows Dev → Linux CI)
+
+**Critical gap**: code is written and tested by agents on Hermes (Windows), but CI/CD runs on GitHub Actions (Ubuntu Linux). Tests that pass on Linux may fail on Windows and vice versa.
+
+### Known platform-specific pitfalls for Python tests
+
+| # | Pitfall | Example | Fix |
+|---|---------|---------|-----|
+| 1 | `from x import y` creates a local reference. Patching `x.y` after import won't affect the importing module's `y`. | `from openai import AsyncOpenAI` in `translator.py` → patching `openai.AsyncOpenAI` has no effect | Patch `backend.translator.AsyncOpenAI` (the importer), not `openai.AsyncOpenAI` |
+| 2 | Lazy imports inside functions (`from backend.db import fn`) create local names, not module attributes. | `patch("backend.translator.get_translation")` fails because `get_translation` is a local variable, not `backend.translator.get_translation` | Patch the source: `patch("backend.db.get_translation")` |
+| 3 | `MagicMock` does NOT support `__await__` in Python 3.11. Use `AsyncMock` for anything that will be `await`-ed. | `client.get.return_value = resp` → `await resp` raises `TypeError: object MagicMock can't be used in 'await' expression` | `client.get = AsyncMock(return_value=resp)` |
+| 4 | Hardcoded `/tmp/` paths fail on Windows. | `init_db("/tmp/test/db.sqlite")` → `OperationalError: unable to open database file` | Use `tempfile.gettempdir()` or mock the filesystem call / `aiosqlite.connect` |
+
+### Gate validation protocol
+
+Before declaring a gate "passing":
+
+1. **Run EVERY check command locally** — not just "should pass on Linux"
+2. If a test fails locally but is expected to pass on Linux CI → **investigate the root cause**. Do not assume. A "should pass" is a bug report waiting to happen.
+3. If the root cause is a platform gap (pitfalls above) → mark as `ENV-007` in LogCraft
+4. If the root cause is a real code bug → fix it before merge
+
+### CI-only checks (cannot run on Windows)
+
+These checks are safe to skip locally — they only matter in CI:
+- Docker builds
+- OS-specific path resolution
+- Network-dependent smoke tests (need BOT_TOKEN)
+
 ## Agent Rules (Mandatory)
 
 1. **ТЗ — source of truth**. Если возникает противоречие — спрашивать, не выдумывать.
@@ -375,6 +405,8 @@ LogCraft cross-references new failures against this archive to detect recurring 
 8. **Логи = structured + semantic anchor**. `[ModuleName] message with {Params}`.
 9. **Никаких DeepL/OpenRouter** — только OpenCode Go модели.
 10. **Блокирующие вопросы — спрашивать сразу**, не молча выбирать запасной путь.
+11. **Любой PR → ревью перед мержем**. Даже «очевидные» изменения (YAML, README). Merge только после явного OK.
+12. **Тесты != «должны пройти»**. Каждый тест проверяется локально. Если тест падает — разобраться: реальный баг или платформенный gap (ENV-007). Не списывать на «на линуксе пройдёт» без доказательств.
 
 ## Open Questions (собираем здесь)
 
