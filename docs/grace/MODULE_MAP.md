@@ -42,9 +42,9 @@ modules:
   - name: bot
     layer: Presentation
     file: backend/bot.py
-    depends_on: [config]
-    responsibility: "Telegram bot: /start, Mini App button"
-    contract: "Responds to /start with inline keyboard"
+    depends_on: [config, parser, db, models]
+    responsibility: "Telegram bot: /start, URL → parse → WebApp button"
+    contract: "URL messages return WebAppInfo button; non-URL messages return help text"
 
   - name: parser
     layer: Application
@@ -91,6 +91,9 @@ edges:
   - {from: main,    to: translator, type: calls}
   - {from: main,    to: models,    type: uses}
   - {from: bot,     to: config,    type: reads-settings}
+  - {from: bot,     to: parser,    type: calls}
+  - {from: bot,     to: db,        type: caches-through}
+  - {from: bot,     to: models,    type: uses}
 
   # Application → Domain/Data
   - {from: parser,     to: models, type: produces}
@@ -123,7 +126,10 @@ edges:
           ├──→ translator (calls)
           └──→ models  (uses)
 
-  bot ──→ config  (reads-settings)
+  bot ──┬──→ config  (reads-settings)
+        ├──→ parser  (calls)
+        ├──→ db      (caches-through)
+        └──→ models  (uses)
   parser ──→ models  (produces)
   parser ──→ config  (reads-settings)
   translator ──→ models  (type-gates)
@@ -148,7 +154,7 @@ edges:
 | Module | Layer | File | Dependencies |
 |--------|-------|------|-------------|
 | main | Presentation | `backend/main.py` | config, db, models, parser, translator, bot |
-| bot | Presentation | `backend/bot.py` | config |
+| bot | Presentation | `backend/bot.py` | config, parser, db, models |
 | parser | Application | `backend/parser.py` | models, config |
 | translator | Application | `backend/translator.py` | models, db |
 | models | Domain | `backend/models.py` | (none) |

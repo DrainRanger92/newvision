@@ -1,4 +1,4 @@
-# Curtain Reader
+# NewVision
 
 [![PR Build Gate](https://github.com/DrainRanger92/newvision/actions/workflows/pr-build-gate.yml/badge.svg)](https://github.com/DrainRanger92/newvision/actions/workflows/pr-build-gate.yml)
 
@@ -20,9 +20,9 @@ Telegram Mini App для чтения английских технически�
 ## Milestones
 
 - [x] M1 — Skeleton (backend + bot + frontend запускаются)
-- [ ] M2 — Parser (URL → блоки)
-- [ ] M3 — Translation (lazy + cache)
-- [ ] M4 — Bot integration (URL → Mini App)
+- [x] M2 — Parser (URL → блоки) ✅
+- [x] M3 — Translation (lazy + cache) ✅
+- [x] M4 — Bot integration (URL → Mini App) ✅
 - [ ] M5 — Curtain UX (touch swipe)
 - [ ] M6 — Telegram theme + polish
 - [ ] M7 — Deploy (VPS + Vercel + HTTPS)

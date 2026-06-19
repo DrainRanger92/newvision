@@ -15,8 +15,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
-  color: var(--text-color, #1a1a1a);
-  background-color: var(--bg-color, #ffffff);
+  color: var(--tg-text-color, #1a1a1a);
+  background-color: var(--tg-bg-color, #ffffff);
 }
 
 .app {
@@ -25,7 +25,177 @@ body {
   padding: 1rem;
 }
 
-h1 {
+/* ── Telegram theme CSS variables (applied via JS, fallbacks for browser) ── */
+
+:root {
+  --tg-bg-color: #ffffff;
+  --tg-text-color: #1a1a1a;
+  --tg-hint-color: #999999;
+  --tg-link-color: #2481cc;
+  --tg-secondary-bg-color: #f0f0f0;
+  --tg-button-color: #2481cc;
+  --tg-button-text-color: #ffffff;
+}
+
+/* ── Reader ── */
+
+.article {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.article-title {
   font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 1rem;
+  color: var(--tg-text-color, #1a1a1a);
+}
+
+.article-blocks > * + * {
+  margin-top: 1rem;
+}
+
+.paragraph {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.paragraph code {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.15em 0.3em;
+  background-color: var(--tg-secondary-bg-color, #f0f0f0);
+  border-radius: 3px;
+}
+
+/* ── Headings ── */
+
+.heading {
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1.5rem;
   margin-bottom: 0.5rem;
+}
+
+.heading-1 { font-size: 1.5rem; }
+.heading-2 { font-size: 1.3rem; }
+.heading-3 { font-size: 1.15rem; }
+.heading-4 { font-size: 1.05rem; }
+.heading-5 { font-size: 1rem; }
+.heading-6 { font-size: 0.95rem; }
+
+/* ── Code blocks ── */
+
+.code-block-wrapper {
+  position: relative;
+  margin: 1rem 0;
+}
+
+.code-lang {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  background-color: var(--tg-hint-color, #999999);
+  color: var(--tg-bg-color, #ffffff);
+  border-radius: 0 0.25rem 0 0.25rem;
+  opacity: 0.8;
+}
+
+.code-block {
+  background-color: var(--tg-secondary-bg-color, #f0f0f0);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.code-block code {
+  font-family: inherit;
+}
+
+/* ── Images ── */
+
+.image-block {
+  margin: 1rem 0;
+}
+
+.image-block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  display: block;
+}
+
+.image-alt {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--tg-hint-color, #999999);
+  text-align: center;
+  margin-top: 0.25rem;
+}
+
+/* ── Lists ── */
+
+.list {
+  padding-left: 1.5rem;
+  line-height: 1.7;
+}
+
+.list li {
+  margin-bottom: 0.25rem;
+}
+
+.list-unordered {
+  list-style-type: disc;
+}
+
+.list-ordered {
+  list-style-type: decimal;
+}
+
+/* ── Quotes ── */
+
+.quote {
+  border-left: 3px solid var(--tg-link-color, #2481cc);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: var(--tg-hint-color, #999999);
+}
+
+/* ── Loading / Error states ── */
+
+.reader-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  padding: 2rem;
+  text-align: center;
+  color: var(--tg-hint-color, #999999);
+}
+
+.reader-error {
+  color: #e74c3c;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--tg-secondary-bg-color, #f0f0f0);
+  border-top-color: var(--tg-link-color, #2481cc);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

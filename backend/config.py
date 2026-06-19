@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     bot_token: str = ""
     bot_enabled: bool = False
+    mini_app_url: str = "http://localhost:5173"
     cors_origins: list[str] = ["http://localhost:5173"]
     db_path: str = "data/curtain_reader.db"
     fetch_timeout: float = 10.0
