@@ -284,19 +284,33 @@ Every milestone cycle MUST pass these gates before merge. Failures trigger autom
 | G4-port-free | `python gates/check-port.py 8000` | Exit 0 (8001-8003 also checked for build race) |
 | G14-test-urls | `python gates/validate-test-urls.py` | All URLs return 200 |
 
-### Build Gates (run per agent, before commit)
+### Infrastructure Gates (автоматические — срабатывают без действий агента)
+
+Эти gates проверяются git-hooks и CI. Агент не запускает их вручную. При ошибке — читать exit code и фиксить код.
+
+| Gate | Триггер | Что проверяет |
+|------|---------|---------------|
+| G6-frontend-build | `gates/git-agent.sh push` (pre-push hook) | `npm run build` — полная сборка frontend |
+| G7-lint | `gates/git-agent.sh commit` (pre-commit hook) | `ruff check backend/` — Python линтинг |
+| G15-typecheck | `gates/git-agent.sh commit` (pre-commit hook) | `npx tsc --noEmit` — TypeScript typecheck |
+| CI (validate-python) | Pull Request creation / push | GitHub Actions: imports + ruff + pytest |
+| CI (validate-frontend) | Pull Request creation / push | GitHub Actions: `npm ci && npm run build` |
+
+> **Агент не вызывает эти gates.** Если хук вернул exit code != 0 — прочитать вывод, исправить код, повторить коммит.
+
+### Contextual Gates (ручной запуск агентом)
+
+Эти gates требуют осмысленного участия агента — выбора URL, интерпретации результата.
 
 | Gate | Command | PASS Criteria |
 |------|---------|---------------|
 | G5-imports | `PYTHONPATH=. python -c "from backend.main import app; print('OK')"` | stdout="OK", exit 0 |
-| G6-frontend-build | `cd frontend && npm run build` | exit 0 |
-| G7-lint | `ruff check backend/` | exit 0 |
 | G8-smoke-start | Start uvicorn, curl health | `{"status":"ok"}` |
 | G9-smoke-parse | Parse known-good URL | `blocks` array length > 0 |
 | G10-smoke-translate | Translate first translatable block | `translated_text` non-empty, `error` false |
 | G11-system-prompt | `grep -q "TRANSLATION_SYSTEM_PROMPT" backend/translator.py` | Match found |
-| G15-typecheck | `cd frontend && npx tsc --noEmit` | exit 0 |
 | G16-env-path | `python -c "from backend.config import settings; assert settings.db_path"` | exit 0 |
+| G18-smoke-script | `bash gates/smoke-test.sh [port]` (см. Правило 2) | exit 0 |
 
 ### Post-build Gates (run per agent, after build gates pass)
 
@@ -356,10 +370,22 @@ python gates/budget-calc.py
 | M6 Theme + Polish | Single builder | $0.30–1 | CSS variables, theme detection |
 | M7 Deploy | Single builder | $0.30–1 | Docker, Vercel, smoke on device |
 
-### Budget cap
+### Budget cap — HARD STOP
 
-Per `docs/cycle-config.json`, default `max_cycle_cost = $5.00`. M5 is the only milestone
-expected to exceed this; raise the cap for M5 to $15.00 before starting the cycle.
+Протокол оркестратора:
+
+1. **Перед каждым spawn-ом агента** (новый builder, validator, LogCraft) —
+   выполнить `python gates/budget-calc.py`
+2. Если `CostPerAcceptedChange > max_cycle_cost` (из `docs/cycle-config.json`) —
+   скрипт возвращает **exit 1**
+3. **exit 1 → оркестратор физически блокирует spawn**. Никаких новых задач.
+   Единственное действие: сообщить пользователю «Бюджет цикла исчерпан.
+   CostPerAcceptedChange: $X. Максимум: $Y. Дождитесь решения администратора.»
+4. Игнорирование exit 1 = нарушение протокола оркестратора.
+
+> **M5 — единственный milestone**, для которого `max_cycle_cost` превышает $5.00.
+> Значение устанавливается в `docs/cycle-config.json` перед стартом цикла и НЕ может
+> быть изменено агентом. Изменение конфига без явного указания пользователя = нарушение.
 
 ## LogCraft Reports
 
@@ -397,10 +423,10 @@ After every cycle, LogCraft produces a report at `docs/logcraft/{cycle-id}-repor
 
 Full taxonomy: `docs/loopcraft/LOGCRAFT-SKILL.md` §3.
 
-### M3 Failure Post-Mortem (archived findings)
+### M3 Failure Post-Mortem
 
-The 10 failures from M3 are pre-classified in `docs/loopcraft/LOGCRAFT-SKILL.md` §4.
-LogCraft cross-references new failures against this archive to detect recurring patterns.
+См. `docs/loopcraft/LOGCRAFT-SKILL.md` §4 — исторические паттерны отказов M3.
+LogCraft сверяет новые ошибки с этим архивом для выявления повторяющихся паттернов.
 
 ## Platform Environment Awareness (Windows Dev → Linux CI)
 
@@ -434,7 +460,11 @@ These checks are safe to skip locally — they only matter in CI:
 ## Agent Rules (Mandatory)
 
 1. **ТЗ — source of truth**. Если возникает противоречие — спрашивать, не выдумывать.
-2. **Smoke-test обязателен**. Каждый build-агент должен запустить свой код и убедиться, что он работает, до коммита.
+2. **Smoke-test — формализован**. Каждый build-агент обязан выполнить `bash gates/smoke-test.sh [port]`
+   перед коммитом. Скрипт физически поднимает процесс, пингует порт, проверяет HTTP 200 и парсит тестовый URL.
+   Если smoke-test.sh не существует — выполнить эквивалентную команду вручную:
+   `curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health`.
+   Exit code != 0 = задача не принята.
 3. **Один осмысленный коммит**. Никаких fixup-ов, wip-ов, «fix typo» в истории.
 4. **Имена = бизнес-смысл**. `ShouldEnableCurtain`, не `ModeToIsEnabled`. `parse_article`, не `do_stuff`.
 5. **Не трогать лишнего**. Изменения только в скоупе задачи.
@@ -444,11 +474,17 @@ These checks are safe to skip locally — they only matter in CI:
 9. **Никаких DeepL/OpenRouter** — только OpenCode Go модели.
 10. **Блокирующие вопросы — спрашивать сразу**, не молча выбирать запасной путь.
 11. **Любой PR → ревью перед мержем**. Даже «очевидные» изменения (YAML, README). Merge только после явного OK.
+12. **Тесты != «должны пройти»**. Каждый тест проверяется локально. Если тест падает — разобраться:
+    реальный баг или платформенный gap (ENV-007). Не списывать на «на линуксе пройдёт» без доказательств.
+13. **Никаких хардкодных адресов инфраструктуры**. Адреса внешних сервисов (API URL, Mini App URL,
+    DB path) — только через конфигурацию: `pydantic-settings` для Python backend, `VITE_` env vars
+    для Vite frontend. Никаких зашитых строк `/api`, `localhost:8000` в коде. Default-значения
+    допустимы только как fallback при отсутствии переменной.
 14. **TypeScript Strict Mode — zero tolerance**. Перед написанием любого frontend-кода — прочитать
     `frontend/tsconfig.json`. Если включены `noUncheckedIndexedAccess` / `noUnusedLocals` /
     `noUnusedParameters` / `strict: true` — писать код, который проходит `tsc -b` **с первого раза**.
-    Каждый доступ по индексу (`arr[i]`, `obj[k]`) требут null-guard. Каждый импорт — используется.
-    CI gate G15 существует именно для этого. Не полагаться на CI как на первую линию обороны.
+    Каждый доступ по индексу (`arr[i]`, `obj[k]`) требует null-guard. Каждый импорт — используется.
+    Нарушение = блокировка pre-commit hook (G15). Не полагаться на CI как на первую линию обороны.
 
 15. **Git hooks — hard constraint**. Настроены `gates/git-agent.sh` + `pre-commit`/`pre-push` хуки.
     - **pre-commit**: TypeScript typecheck (`tsc --noEmit`) на изменённых файлах
