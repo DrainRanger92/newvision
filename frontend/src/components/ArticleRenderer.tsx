@@ -1,7 +1,12 @@
+import DOMPurify from "dompurify";
 import type { Article, Block } from "../services/api";
 
 interface Props {
   article: Article;
+}
+
+function sanitizeHtml(text: string): string {
+  return DOMPurify.sanitize(text, { ADD_ATTR: ["target"] });
 }
 
 export default function ArticleRenderer({ article }: Props) {
@@ -22,7 +27,7 @@ function BlockRenderer({ block }: { block: Block }) {
     case "heading":
       return renderHeading(block.level, block.content);
     case "paragraph":
-      return <p className="paragraph" dangerouslySetInnerHTML={{ __html: block.content }} />;
+      return <p className="paragraph" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />;
     case "code":
       return renderCode(block.content, block.language);
     case "image":
@@ -30,7 +35,7 @@ function BlockRenderer({ block }: { block: Block }) {
     case "list":
       return renderList(block.items, block.ordered);
     case "quote":
-      return <blockquote className="quote" dangerouslySetInnerHTML={{ __html: block.content }} />;
+      return <blockquote className="quote" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }} />;
     default:
       return null;
   }
@@ -38,7 +43,7 @@ function BlockRenderer({ block }: { block: Block }) {
 
 function renderHeading(level: number, content: string) {
   const Tag = `h${level}` as keyof JSX.IntrinsicElements;
-  return <Tag className={`heading heading-${level}`} dangerouslySetInnerHTML={{ __html: content }} />;
+  return <Tag className={`heading heading-${level}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />;
 }
 
 function renderCode(content: string, language: string | null) {
@@ -66,7 +71,7 @@ function renderList(items: string[], ordered: boolean) {
   return (
     <Tag className={`list ${ordered ? "list-ordered" : "list-unordered"}`}>
       {items.map((item, i) => (
-        <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+        <li key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(item) }} />
       ))}
     </Tag>
   );
