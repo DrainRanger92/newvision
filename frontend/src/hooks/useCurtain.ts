@@ -5,6 +5,7 @@ import React from "react";
  * Touch gesture engine for CurtainBlock.
  * Captures touchstart/move/end, calculates drag offset,
  * evaluates threshold + flick velocity, triggers snap open/close.
+ * Supports both open→close (swipe down) and close→open (swipe up) gestures.
  */
 
 export type CurtainState = "idle" | "dragging" | "loading" | "loaded" | "error";
@@ -29,13 +30,17 @@ const MAX_OPEN = 400;
 const HORIZONTAL_GATE_DEG = 30;
 const VELOCITY_WINDOW_MS = 150;
 
+export const SNAP_DURATION_MS = 250;
+
 function horizontalGate(dx: number, dy: number): boolean {
+  if (Math.abs(dy) < 1) return true;
   const angle = Math.abs(Math.atan2(Math.abs(dx), Math.abs(dy)) * (180 / Math.PI));
   return angle > 90 - HORIZONTAL_GATE_DEG;
 }
 
 export function useCurtain(
   blockHeight: number,
+  isCurrentlyOpen: boolean,
   onOpen: () => Promise<void>,
   onClose: () => void
 ): UseCurtainResult {
@@ -43,6 +48,8 @@ export function useCurtain(
   const [offset, setOffset] = React.useState(0);
 
   const startY = React.useRef(0);
+  const startX = React.useRef(0);
+  const startOffset = React.useRef(0);
   const startTime = React.useRef(0);
   const positions = React.useRef<Array<{ t: number; y: number }>>([]);
   const maxOpen = React.useRef(Math.min(blockHeight, MAX_OPEN));
@@ -51,13 +58,25 @@ export function useCurtain(
     maxOpen.current = Math.min(blockHeight, MAX_OPEN);
   }, [blockHeight]);
 
+  React.useEffect(() => {
+    if (isCurrentlyOpen) {
+      setOffset(maxOpen.current);
+      setState("loaded");
+    } else {
+      setOffset(0);
+      setState("idle");
+    }
+  }, [isCurrentlyOpen]);
+
   const handleTouchStart = React.useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
     startY.current = touch.clientY;
+    startX.current = touch.clientX;
+    startOffset.current = offset;
     startTime.current = Date.now();
     positions.current = [{ t: Date.now(), y: touch.clientY }];
     setState("dragging");
-  }, []);
+  }, [offset]);
 
   const handleTouchMove = React.useCallback(
     (e: React.TouchEvent) => {
@@ -66,12 +85,13 @@ export function useCurtain(
 
       if (Math.abs(dy) <= DEAD_ZONE) return;
 
-      const dx = Math.abs(touch.clientX - (e.touches[0]?.clientX || 0));
+      const dx = Math.abs(startX.current - touch.clientX);
       if (horizontalGate(dx, dy)) return;
 
       e.preventDefault();
 
-      const clamped = Math.max(0, Math.min(dy, maxOpen.current));
+      const rawOffset = startOffset.current + dy;
+      const clamped = Math.max(0, Math.min(rawOffset, maxOpen.current));
       setOffset(clamped);
       positions.current.push({ t: Date.now(), y: touch.clientY });
 
@@ -99,19 +119,24 @@ export function useCurtain(
     }
 
     const threshold = maxOpen.current * OPEN_THRESHOLD;
+    const deltaFromStart = Math.abs(offset - startOffset.current);
     const shouldOpen =
-      offset > threshold || (velocity > FLICK_VELOCITY && offset > DEAD_ZONE);
+      offset > threshold || (velocity > FLICK_VELOCITY && deltaFromStart > DEAD_ZONE);
+    const wasOpen = startOffset.current > threshold;
 
-    if (shouldOpen) {
+    if (wasOpen && !shouldOpen) {
+      setOffset(0);
+      setState("idle");
+      onClose();
+    } else if (shouldOpen) {
       setOffset(maxOpen.current);
       setState("loading");
       onOpen()
         .then(() => setState("loaded"))
         .catch(() => setState("error"));
     } else {
-      setOffset(0);
-      setState("idle");
-      onClose();
+      setOffset(startOffset.current > 0 ? maxOpen.current : 0);
+      setState(startOffset.current > 0 ? "loaded" : "idle");
     }
   }, [offset, onOpen, onClose]);
 

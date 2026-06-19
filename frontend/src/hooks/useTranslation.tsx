@@ -1,16 +1,16 @@
-/**
- * # @module: useTranslation
- * React Context providing a shared translation cache.
- * Uses Map<string, string> keyed by `articleId:blockIndex`.
- * Deduplicates in-flight requests via pending Promise map.
- * Preloading uses batch endpoint for efficiency.
- */
-
 import React, { createContext, useContext, useCallback, useRef } from "react";
 import {
   fetchBlockTranslation,
   fetchBlockTranslationBatch,
 } from "../services/api";
+
+/**
+ * # @module: useTranslation
+ * React Context providing a shared translation cache.
+ * Uses Map<string, string> keyed by `articleId:blockIndex`.
+ * Deduplicates in-flight requests via pending Promise map.
+ * Error responses are cached as "[translation error]" (not retried).
+ */
 
 interface TranslationContextValue {
   getTranslation: (articleId: string, blockIndex: number) => Promise<string>;
@@ -22,6 +22,8 @@ interface TranslationContextValue {
 }
 
 const TranslationContext = createContext<TranslationContextValue | null>(null);
+
+const ERROR_MARKER = "[translation error]";
 
 export function TranslationProvider({
   children,
@@ -47,9 +49,10 @@ export function TranslationProvider({
           pending.current.delete(key);
           return text;
         })
-        .catch((err) => {
+        .catch(() => {
+          cache.current.set(key, ERROR_MARKER);
           pending.current.delete(key);
-          throw err;
+          return ERROR_MARKER;
         });
 
       pending.current.set(key, promise);
@@ -81,7 +84,9 @@ export function TranslationProvider({
           cache.current.set(`${articleId}:${uncached[j]}`, text);
         });
       } catch {
-        // Fire-and-forget: failures are non-critical for preloading
+        uncached.forEach((i) => {
+          cache.current.set(`${articleId}:${i}`, ERROR_MARKER);
+        });
       }
     },
     []

@@ -10,7 +10,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
 import type { Block, HeadingBlock, ListBlock, QuoteBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
-import { useCurtain } from "../hooks/useCurtain";
+import { useCurtain, SNAP_DURATION_MS } from "../hooks/useCurtain";
 import { useTranslation } from "../hooks/useTranslation";
 
 interface CurtainBlockProps {
@@ -88,13 +88,8 @@ export default function CurtainBlock({
   }, []);
 
   const handleOpen = useCallback(async () => {
-    try {
-      const text = await getTranslation(articleId, blockIndex);
-      setTranslationText(text);
-    } catch {
-      setTranslationText(null);
-      throw new Error("Translation failed");
-    }
+    const text = await getTranslation(articleId, blockIndex);
+    setTranslationText(text);
   }, [articleId, blockIndex, getTranslation]);
 
   const handleClose = useCallback(() => {
@@ -103,6 +98,7 @@ export default function CurtainBlock({
 
   const { curtainProps, state, offset, isOpen } = useCurtain(
     blockHeight,
+    isOpen,
     handleOpen,
     handleClose
   );
@@ -121,18 +117,17 @@ export default function CurtainBlock({
       className="curtain-container"
       data-curtain-block=""
       data-block-index={blockIndex}
+      {...curtainProps}
     >
       <div
         className="curtain-original"
         style={{
           transform: `translateY(-${offset}px) translateZ(0)`,
-          transition: isOpen
-            ? `transform ${250}ms ease-out`
-            : offset === 0
-            ? `transform ${250}ms ease-out`
-            : "none",
+          transition:
+            offset === 0 || isOpen
+              ? `transform ${SNAP_DURATION_MS}ms ease-out`
+              : "none",
         }}
-        {...curtainProps}
       >
         {renderBlockContent(block)}
       </div>
