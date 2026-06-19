@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 export interface HeadingBlock {
   type: "heading";
@@ -14,7 +14,7 @@ export interface ParagraphBlock {
 export interface CodeBlock {
   type: "code";
   content: string;
-  language: string | null;
+  language?: string;
 }
 
 export interface ImageBlock {
@@ -45,12 +45,10 @@ export interface Article {
 }
 
 export async function fetchArticle(id: string): Promise<Article> {
-  const response = await fetch(`${API_BASE}/articles/${id}`);
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Article not found");
-    }
-    throw new Error(`Failed to fetch article: ${response.statusText}`);
+  const res = await fetch(`${API_BASE}/articles/${id}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch article: ${res.status} ${text}`);
   }
-  return response.json() as Promise<Article>;
+  return res.json() as Promise<Article>;
 }

@@ -1,15 +1,30 @@
 """
-# @module: main
+<MODULE_CONTRACT>
+name: main
+layer: Presentation
+depends: [config, db, models, parser, translator, bot]
+responsibility: FastAPI application assembly — CORS, lifespan, endpoints (/health, /api/parse, /api/translate, /api/translate/batch, GET /api/articles/{id})
+contract: All endpoints return valid JSON; health always responds 200; parse and translate endpoints delegate to application-layer modules; lifespan manages db init/close and bot polling lifecycle
+</MODULE_CONTRACT>
+
+<LINKS>
+- config: uses settings for CORS origins, db_path, API keys
+- db: init_db() in lifespan; get_article_by_id, get_article_by_url, save_article in endpoints
+- models: ParseRequest, TranslateRequest, BatchTranslateRequest, TranslateResponse, BatchTranslateResponse, Article
+- parser: parse_article() for POST /api/parse
+- translator: translate_block(), translate_blocks_batch() for translate endpoints
+- bot: start_bot_polling() in lifespan
+</LINKS>
 """
 
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.bot import start_bot_polling
 from backend.config import settings
@@ -35,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI):
     await init_db(settings.db_path)
     bot_task = asyncio.create_task(start_bot_polling())
     yield
