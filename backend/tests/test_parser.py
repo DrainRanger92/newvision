@@ -3,14 +3,13 @@ Tests for backend/parser.py — URL normalization, HTML extraction, block classi
 error handling, and fetch mocking.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
 from bs4 import BeautifulSoup
 
 from backend.models import (
-    BlockType,
     CodeBlock,
     HeadingBlock,
     ImageBlock,
@@ -20,7 +19,6 @@ from backend.models import (
 )
 from backend.parser import (
     ParseError,
-    _classify_element,
     _detect_language,
     _inner_html,
     _normalize_url,

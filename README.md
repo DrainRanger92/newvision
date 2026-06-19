@@ -1,5 +1,7 @@
 # Curtain Reader
 
+[![PR Build Gate](https://github.com/DrainRanger92/newvision/actions/workflows/pr-build-gate.yml/badge.svg)](https://github.com/DrainRanger92/newvision/actions/workflows/pr-build-gate.yml)
+
 Telegram Mini App для чтения английских технических статей с inline-переводом.
 Жест «шторка» — свайп вверх по абзацу reveals перевод.
 

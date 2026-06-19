@@ -1,0 +1,26 @@
+name: 'Python Validate'
+description: 'Validate Python code: imports, lint, and tests (PR Build Gate)'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: pip install -r backend/requirements.txt
+      shell: bash
+
+    - name: G-python-imports — Check backend can be imported
+      run: PYTHONPATH=backend python -c "from backend.main import app; print('OK')"
+      shell: bash
+
+    - name: G-python-lint — Ruff linting
+      run: cd backend && ruff check .
+      shell: bash
+
+    - name: G-python-tests — Run pytest
+      run: cd backend && python -m pytest tests/ -v --tb=short
+      shell: bash

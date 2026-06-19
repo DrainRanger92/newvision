@@ -59,7 +59,7 @@ def sample_quote_html() -> str:
 
 @pytest.fixture
 def sample_figure_with_image_html() -> str:
-    return '<figure><img src="https://example.com/fig.png" alt="Figure"/></figure>"
+    return '<figure><img src="https://example.com/fig.png" alt="Figure"/></figure>'
 
 
 @pytest.fixture

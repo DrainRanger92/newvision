@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from backend.models import (
-    BlockType,
     CodeBlock,
     HeadingBlock,
     ImageBlock,
@@ -17,7 +16,6 @@ from backend.models import (
     QuoteBlock,
 )
 from backend.translator import (
-    CODE_PLACEHOLDER_RE,
     TranslationError,
     _build_batch_prompt,
     _build_translation_prompt,
@@ -252,7 +250,6 @@ class TestTranslateText:
             await translate_text("Test", "sk-custom", "gpt-4")
 
             # AsyncOpenAI was constructed with our api_key
-            import openai
 
             # Verify the API was called
             assert mock_openai_client.chat.completions.create.called

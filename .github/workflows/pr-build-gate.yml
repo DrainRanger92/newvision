@@ -1,0 +1,27 @@
+name: PR Build Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR when new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Python validation: imports + lint + tests ──────────────────────
+  validate-python:
+    name: Python (imports / lint / tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/python-validate
+
+  # ── Frontend validation: npm ci + npm run build ────────────────────
+  validate-frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/frontend-build

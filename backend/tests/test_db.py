@@ -3,7 +3,7 @@ Tests for backend/db.py — SQLite persistence with mocked aiosqlite.
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -53,11 +53,6 @@ class TestGetArticleByUrl:
 
     @pytest.mark.asyncio
     async def test_returns_article_when_found(self, mock_db: MagicMock) -> None:
-        from pydantic import TypeAdapter
-
-        blocks = [ParagraphBlock(content="Hello")]
-        adapter = TypeAdapter(list)
-
         row = MagicMock()
         row.__getitem__.side_effect = lambda k: {
             "id": "abc-123",
