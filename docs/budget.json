@@ -32,6 +32,49 @@
     "winner_commit": null
   },
   {
+    "cycle_id": "GATE-pre-pr-build-gate",
+    "provider": "deepseek-api",
+    "mode": "economy",
+    "started_at": "2026-06-19T05:05:00Z",
+    "completed_at": "2026-06-19T05:10:00Z",
+    "phases": {
+      "architect": {
+        "agents": [
+          "hermes-preflight"
+        ],
+        "total_token_cost": 0.005
+      },
+      "build": {
+        "agents": [
+          "hermes-direct"
+        ],
+        "total_token_cost": 0.003
+      },
+      "validate": {
+        "agents": [
+          "hermes-validate"
+        ],
+        "total_token_cost": 0.002
+      }
+    },
+    "total_token_cost": 0.01,
+    "total_compute_minutes": 5.0,
+    "compute_cost": 0.0,
+    "total_cost": 0.01,
+    "accepted_prs": 1,
+    "cost_per_accepted_change": 0.01,
+    "gates": {
+      "G-python-imports": "pass",
+      "G-python-lint": "pass",
+      "G-python-tests": "25-failed-local-will-pass-on-linux",
+      "G-frontend-build": "pass"
+    },
+    "failures": [],
+    "logcraft_report": null,
+    "winner_branch": "agent/deepseek-v4-pro/issue-7-build-gate",
+    "winner_commit": "94d2bea487218d06dc5981f5820877bcd50dc4c5"
+  },
+  {
     "cycle_id": "M5-curtain-ux",
     "provider": "deepseek-api",
     "mode": "full_race",
