@@ -9,6 +9,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   # ── Python validation: imports + lint + tests ──────────────────────
   validate-python:
@@ -17,6 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/python-validate
+      - name: Report commit status success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=success --field context="validate-python" --field description="Python validation passed"
+      - name: Report commit status failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=failure --field context="validate-python" --field description="Python validation failed"
 
   # ── Frontend validation: npm ci + npm run build ────────────────────
   validate-frontend:
@@ -25,3 +39,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/frontend-build
+      - name: Report commit status success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=success --field context="validate-frontend" --field description="Frontend build passed"
+      - name: Report commit status failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=failure --field context="validate-frontend" --field description="Frontend build failed"
