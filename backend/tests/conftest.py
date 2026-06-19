@@ -90,7 +90,7 @@ def sample_full_article_html() -> str:
 
 @pytest_asyncio.fixture
 async def mock_db() -> AsyncGenerator[MagicMock, None]:
-    """Create a mock aiosqlite connection patching backend.db._db."""
+    """Create a mock aiosqlite connection, patching both _db and aiqlite.connect."""
     import backend.db
 
     conn = MagicMock()
@@ -99,14 +99,19 @@ async def mock_db() -> AsyncGenerator[MagicMock, None]:
     conn.close = AsyncMock()
     conn.row_factory = None
 
-    # Store original and patch
-    original = backend.db._db
+    # Patch aiosqlite.connect so init_db() returns the mock connection
+    # (init_db creates its own connection via await aiosqlite.connect())
+    original_connect = backend.db.aiosqlite.connect
+    backend.db.aiosqlite.connect = AsyncMock(return_value=conn)
+
+    # Also patch the global _db for tests that use it directly
+    original_db = backend.db._db
     backend.db._db = conn
 
     yield conn
 
-    # Restore
-    backend.db._db = original
+    backend.db._db = original_db
+    backend.db.aiosqlite.connect = original_connect
 
 
 @pytest_asyncio.fixture
@@ -140,7 +145,9 @@ def mock_httpx_client(mock_httpx_response: MagicMock) -> MagicMock:
     client = MagicMock()
     client.__aenter__.return_value = client
     client.__aexit__.return_value = None
-    client.get.return_value = mock_httpx_response
+    # Use AsyncMock for get() so that await client.get(url) works (MagicMock
+    # does not support __await__ in Python 3.11)
+    client.get = AsyncMock(return_value=mock_httpx_response)
     return client
 
 
@@ -173,10 +180,10 @@ def mock_openai_response(mock_openai_choice: MagicMock) -> MagicMock:
 
 @pytest_asyncio.fixture
 async def mock_openai_client(mock_openai_response: MagicMock) -> AsyncGenerator[MagicMock, None]:
-    """Patch openai.AsyncOpenAI so translate calls don't hit the real API."""
-    import openai
+    """Patch AsyncOpenAI so translate calls don't hit the real API."""
+    import backend.translator
 
-    original = openai.AsyncOpenAI
+    original = backend.translator.AsyncOpenAI
 
     client = MagicMock()
     client.chat = MagicMock()
@@ -186,8 +193,8 @@ async def mock_openai_client(mock_openai_response: MagicMock) -> AsyncGenerator[
     def _fake_init(*args: object, **kwargs: object) -> MagicMock:
         return client
 
-    openai.AsyncOpenAI = _fake_init  # type: ignore[misc]
+    backend.translator.AsyncOpenAI = _fake_init  # type: ignore[misc]
 
     yield client
 
-    openai.AsyncOpenAI = original
+    backend.translator.AsyncOpenAI = original

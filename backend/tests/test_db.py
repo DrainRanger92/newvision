@@ -22,8 +22,8 @@ class TestInitDb:
         with patch("backend.db.Path.mkdir"):
             await backend.db.init_db(":memory:")
 
-        # Verify execute was called multiple times (tables + indexes)
-        assert mock_db.execute.call_count >= 5
+        # Verify execute was called for tables + indexes (4 SQL statements)
+        assert mock_db.execute.call_count >= 4
         # Verify commit was called
         mock_db.commit.assert_awaited_once()
 

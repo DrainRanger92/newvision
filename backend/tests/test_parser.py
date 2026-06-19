@@ -3,7 +3,7 @@ Tests for backend/parser.py — URL normalization, HTML extraction, block classi
 error handling, and fetch mocking.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -280,7 +280,7 @@ class TestFetchHtml:
 
         client = MagicMock()
         client.__aenter__.return_value = client
-        client.get.return_value = resp
+        client.get = AsyncMock(return_value=resp)
 
         with patch("backend.parser.httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client
@@ -297,7 +297,7 @@ class TestFetchHtml:
 
         client = MagicMock()
         client.__aenter__.return_value = client
-        client.get.return_value = resp
+        client.get = AsyncMock(return_value=resp)
 
         with patch("backend.parser.httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client
@@ -336,7 +336,7 @@ class TestFetchHtml:
 
         client = MagicMock()
         client.__aenter__.return_value = client
-        client.get.return_value = resp
+        client.get = AsyncMock(return_value=resp)
 
         with (
             patch("backend.parser.httpx.AsyncClient") as mock_cls,

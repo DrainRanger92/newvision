@@ -244,7 +244,7 @@ class TestTranslateText:
     @pytest.mark.asyncio
     async def test_passes_api_key_and_model(self, mock_openai_client: MagicMock) -> None:
         with patch("backend.translator.httpx.AsyncClient") as mock_http:
-            http_client = MagicMock()
+            http_client = AsyncMock()
             mock_http.return_value = http_client
 
             await translate_text("Test", "sk-custom", "gpt-4")
@@ -269,16 +269,16 @@ class TestTranslateText:
         client.chat.completions = MagicMock()
         client.chat.completions.create = AsyncMock(return_value=resp)
 
-        import openai
+        import backend.translator
 
-        original = openai.AsyncOpenAI
-        openai.AsyncOpenAI = lambda *a, **kw: client  # type: ignore[assignment]
+        original = backend.translator.AsyncOpenAI
+        backend.translator.AsyncOpenAI = lambda *a, **kw: client  # type: ignore[assignment]
 
         try:
             with pytest.raises(TranslationError, match="empty response"):
                 await translate_text("Hello", "sk-test")
         finally:
-            openai.AsyncOpenAI = original
+            backend.translator.AsyncOpenAI = original
 
 
 # ── translate_block (mocked) ───────────────────────────────────────────
@@ -305,8 +305,8 @@ class TestTranslateBlock:
         block = ParagraphBlock(content="Hello")
 
         with (
-            patch("backend.translator.get_translation", AsyncMock(return_value="Hola")),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.get_translation", AsyncMock(return_value="Hola")),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             text, cached, error = await translate_block(
                 "a", 0, block, "sk-test"
@@ -323,8 +323,8 @@ class TestTranslateBlock:
         block = ParagraphBlock(content="Hello")
 
         with (
-            patch("backend.translator.get_translation", AsyncMock(return_value=None)),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.get_translation", AsyncMock(return_value=None)),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             text, cached, error = await translate_block(
                 "a", 0, block, "sk-test"
@@ -344,8 +344,8 @@ class TestTranslateBlock:
                 "backend.translator.translate_text",
                 AsyncMock(side_effect=TranslationError("fail")),
             ),
-            patch("backend.translator.get_translation", AsyncMock(return_value=None)),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.get_translation", AsyncMock(return_value=None)),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             text, cached, error = await translate_block(
                 "a", 0, block, "sk-test"
@@ -362,9 +362,16 @@ class TestTranslateBlock:
         """Code tags in content are extracted, text translated, tags restored."""
         block = ParagraphBlock(content='Text with <code>inline code</code> inside.')
 
+        # Override the mock response to include the code placeholder
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Text with __CC_0__ inside."))]
+            )
+        )
+
         with (
-            patch("backend.translator.get_translation", AsyncMock(return_value=None)),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.get_translation", AsyncMock(return_value=None)),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             text, *_ = await translate_block("a", 0, block, "sk-test")
 
@@ -389,10 +396,10 @@ class TestTranslateBlocksBatch:
 
         with (
             patch(
-                "backend.translator.get_translations_batch",
+                "backend.db.get_translations_batch",
                 AsyncMock(return_value={0: "Trans A", 1: "Trans B"}),
             ),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             results = await translate_blocks_batch(
                 "a", blocks, "sk-test"
@@ -403,7 +410,9 @@ class TestTranslateBlocksBatch:
         assert results[1] == (1, "Trans B", True, False)
 
     @pytest.mark.asyncio
-    async def test_skips_code_and_image_blocks(self) -> None:
+    async def test_skips_code_and_image_blocks(
+        self, mock_openai_client: MagicMock
+    ) -> None:
         """Code and Image blocks are returned as-is with error=True."""
         blocks = [
             (0, CodeBlock(content="print('hi')")),
@@ -411,8 +420,8 @@ class TestTranslateBlocksBatch:
         ]
 
         with (
-            patch("backend.translator.get_translations_batch", AsyncMock(return_value={})),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.get_translations_batch", AsyncMock(return_value={})),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             results = await translate_blocks_batch(
                 "a", blocks, "sk-test"
@@ -437,10 +446,10 @@ class TestTranslateBlocksBatch:
 
         with (
             patch(
-                "backend.translator.get_translations_batch",
+                "backend.db.get_translations_batch",
                 AsyncMock(return_value={0: "Cached text"}),
             ),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.save_translation", AsyncMock()),
         ):
             results = await translate_blocks_batch(
                 "a", blocks, "sk-test"
@@ -455,15 +464,17 @@ class TestTranslateBlocksBatch:
         assert results[1][3] is False
 
     @pytest.mark.asyncio
-    async def test_batch_api_failure_fallback(self) -> None:
+    async def test_batch_api_failure_fallback(
+        self, mock_openai_client: MagicMock
+    ) -> None:
         """On TranslationError in batch, fall back to translate_text per block."""
         blocks = [
             (0, ParagraphBlock(content="Block A")),
         ]
 
         with (
-            patch("backend.translator.get_translations_batch", AsyncMock(return_value={})),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.get_translations_batch", AsyncMock(return_value={})),
+            patch("backend.db.save_translation", AsyncMock()),
             patch(
                 "backend.translator.translate_text",
                 AsyncMock(return_value="Fallback translation"),
@@ -479,7 +490,9 @@ class TestTranslateBlocksBatch:
         assert results[0][3] is False  # no error - fallback succeeded
 
     @pytest.mark.asyncio
-    async def test_results_are_sorted(self) -> None:
+    async def test_results_are_sorted(
+        self, mock_openai_client: MagicMock
+    ) -> None:
         """Results are returned in ascending block_index order."""
         blocks = [
             (3, ParagraphBlock(content="D")),
@@ -489,10 +502,10 @@ class TestTranslateBlocksBatch:
 
         with (
             patch(
-                "backend.translator.get_translations_batch",
+                "backend.db.get_translations_batch",
                 AsyncMock(return_value={}),
             ),
-            patch("backend.translator.save_translation", AsyncMock()),
+            patch("backend.db.save_translation", AsyncMock()),
             patch(
                 "backend.translator.translate_text",
                 AsyncMock(side_effect=["Trans A", "Trans B", "Trans D"]),

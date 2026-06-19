@@ -167,7 +167,7 @@ async def translate_blocks_batch(
 
     for idx, block in blocks:
         if isinstance(block, CodeBlock) or isinstance(block, ImageBlock):
-            results.append((idx, _get_translatable_text(block), False, True))
+            results.append((idx, block.content if hasattr(block, "content") else "", False, True))
             continue
 
         raw_html = _get_translatable_text(block)

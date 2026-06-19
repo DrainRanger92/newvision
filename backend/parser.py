@@ -80,6 +80,13 @@ def extract_content(html: str, url: str) -> tuple[str, str]:
     doc = Document(html)
     title = doc.title()
     cleaned = doc.summary()
+
+    # If the original HTML has no <title> tag, discard readability's inferred
+    # title (readability generates placeholder titles from URL when missing)
+    soup_check = BeautifulSoup(html, "lxml")
+    if not soup_check.find("title"):
+        title = None
+
     if not cleaned or not BeautifulSoup(cleaned, "lxml").get_text(strip=True):
         logger.warning(
             "[Parser] Readability returned empty/short content for %s, falling back to <body>", url
@@ -87,9 +94,10 @@ def extract_content(html: str, url: str) -> tuple[str, str]:
         soup = BeautifulSoup(html, "lxml")
         body = soup.find("body")
         cleaned = str(body) if body else html
-        if not title:
-            title_tag = soup.find("title")
-            title = title_tag.get_text(strip=True) if title_tag else url
+        # When falling back to <body>, re-extract title from original HTML.
+        # readability's inferred title is unreliable when content is empty/no <title> exists.
+        title_tag = soup.find("title")
+        title = title_tag.get_text(strip=True) if title_tag else url
     if not title:
         title = url
     logger.info("[Parser] Extracted title=%s content_len=%d", title, len(cleaned))
@@ -127,7 +135,8 @@ def _classify_element(el: Tag) -> list[Block]:
     elif tag == "pre":
         code_el = el.find("code") if el.find("code") else el
         content = code_el.get_text()
-        lang = _detect_language(el)
+        # Language class may be on <pre> (brush:) or on nested <code> (language-python)
+        lang = _detect_language(el) or _detect_language(code_el)
         if content.strip():
             blocks.append(CodeBlock(content=content, language=lang))
 
@@ -161,7 +170,8 @@ def _classify_element(el: Tag) -> list[Block]:
         elif pre:
             code_el = pre.find("code") if pre.find("code") else pre
             content = code_el.get_text()
-            lang = _detect_language(pre)
+            # Language class may be on <pre> (brush:) or on nested <code> (language-python)
+            lang = _detect_language(pre) or _detect_language(code_el)
             if content.strip():
                 blocks.append(CodeBlock(content=content, language=lang))
 
@@ -186,10 +196,12 @@ def _detect_language(el: Tag) -> str | None:
     classes = el.get("class", [])
     if isinstance(classes, str):
         classes = classes.split()
-    for cls in classes:
-        match = re.match(r"(?:language|lang|brush)[-:]\s*(\w+)", cls, re.IGNORECASE)
-        if match:
-            return match.group(1).lower()
+    # Join all classes into one string so multi-token patterns
+    # like "brush: ruby" (parsed as ["brush:", "ruby"]) are matched
+    full_text = " ".join(classes)
+    match = re.search(r"(?:language|lang|brush)[-:]\s*(\w+)", full_text, re.IGNORECASE)
+    if match:
+        return match.group(1).lower()
     return None
 
 
