@@ -1,7 +1,15 @@
+/**
+ * # @module: Reader
+ *
+ * Article reader page. Loads article by ID from URL params,
+ * renders via ArticleRenderer wrapped in TranslationProvider.
+ */
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { Article } from "../services/api";
 import { fetchArticle } from "../services/api";
+import { TranslationProvider } from "../hooks/useTranslation";
 import ArticleRenderer from "../components/ArticleRenderer";
 
 export default function Reader() {
@@ -70,5 +78,9 @@ export default function Reader() {
     );
   }
 
-  return <ArticleRenderer article={article} />;
+  return (
+    <TranslationProvider>
+      <ArticleRenderer article={article} />
+    </TranslationProvider>
+  );
 }
