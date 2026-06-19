@@ -1,18 +1,5 @@
 """
-<MODULE_CONTRACT>
-name: config
-layer: Data
-depends: []
-responsibility: Application configuration from environment variables and .env file
-contract: Provides a singleton `settings` object with typed, validated configuration valid at import time
-</MODULE_CONTRACT>
-
-<LINKS>
-- main: uses settings to configure app, CORS, DB path, API keys
-- bot: reads bot_token and bot_enabled to control polling
-- parser: reads fetch_timeout and fetch_max_bytes
-- translator: reads deepseek_api_key and translation_model
-</LINKS>
+# @module: config
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

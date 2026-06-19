@@ -1,17 +1,5 @@
 """
-<MODULE_CONTRACT>
-name: parser
-layer: Application
-depends: [models, config]
-responsibility: URL → (raw HTML, title, classified blocks) pipeline; HTTP fetch + HTML extraction + block classification
-contract: Returns a tuple (raw_html, title, blocks) on success; raises ParseError with clear message on any failure; preserves raw_html for downstream consumers (translator)
-</MODULE_CONTRACT>
-
-<LINKS>
-- models: produces Block instances (HeadingBlock, ParagraphBlock, CodeBlock, ImageBlock, ListBlock, QuoteBlock)
-- config: reads fetch_timeout and fetch_max_bytes from settings
-- main: called from POST /api/parse endpoint
-</LINKS>
+# @module: parser
 """
 
 import logging
