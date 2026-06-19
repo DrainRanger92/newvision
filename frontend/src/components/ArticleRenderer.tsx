@@ -18,27 +18,26 @@ interface Props {
   article: Article;
 }
 
+function isTitleBlock(block: Block): boolean {
+  return block.type === "heading" && (block as HeadingBlock).level === 1;
+}
+
 export default function ArticleRenderer({ article }: Props) {
   const { preloadTranslations } = useTranslation();
 
   const { sentinelRef } = usePreload(
     article.id,
     article.blocks,
-    article.blocks.length - 1,
     preloadTranslations,
     isTranslatable
   );
-
-  const isTitle = (block: Block): boolean => {
-    return block.type === "heading" && (block as HeadingBlock).level === 1;
-  };
 
   return (
     <article className="article">
       <h1 className="article-title">{article.title}</h1>
       <div className="article-blocks">
         {article.blocks.map((block, index) => {
-          if (isTitle(block)) {
+          if (isTitleBlock(block)) {
             return null;
           }
 

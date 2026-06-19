@@ -7,9 +7,8 @@ import {
 /**
  * # @module: useTranslation
  * React Context providing a shared translation cache.
- * Uses Map<string, string> keyed by `articleId:blockIndex`.
- * Deduplicates in-flight requests via pending Promise map.
- * Error responses are cached as "[translation error]" (not retried).
+ * Uses Map<string, string> keyed by articleId:blockIndex.
+ * Deduplicates in-flight requests. Error responses cached.
  */
 
 interface TranslationContextValue {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 
 /**
  * # @module: useCurtain
@@ -40,45 +40,38 @@ function horizontalGate(dx: number, dy: number): boolean {
 
 export function useCurtain(
   blockHeight: number,
-  isCurrentlyOpen: boolean,
   onOpen: () => Promise<void>,
   onClose: () => void
 ): UseCurtainResult {
-  const [state, setState] = React.useState<CurtainState>("idle");
-  const [offset, setOffset] = React.useState(0);
+  const [state, setState] = useState<CurtainState>("idle");
+  const [offset, setOffset] = useState(0);
 
-  const startY = React.useRef(0);
-  const startX = React.useRef(0);
-  const startOffset = React.useRef(0);
-  const startTime = React.useRef(0);
-  const positions = React.useRef<Array<{ t: number; y: number }>>([]);
-  const maxOpen = React.useRef(Math.min(blockHeight, MAX_OPEN));
+  const startY = useRef(0);
+  const startX = useRef(0);
+  const startOffset = useRef(0);
+  const offsetRef = useRef(0);
+  const positions = useRef<Array<{ t: number; y: number }>>([]);
+  const maxOpen = useRef(Math.min(blockHeight, MAX_OPEN));
+  const rafRef = useRef(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     maxOpen.current = Math.min(blockHeight, MAX_OPEN);
   }, [blockHeight]);
 
-  React.useEffect(() => {
-    if (isCurrentlyOpen) {
-      setOffset(maxOpen.current);
-      setState("loaded");
-    } else {
-      setOffset(0);
-      setState("idle");
-    }
-  }, [isCurrentlyOpen]);
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
 
-  const handleTouchStart = React.useCallback((e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
     startY.current = touch.clientY;
     startX.current = touch.clientX;
-    startOffset.current = offset;
-    startTime.current = Date.now();
+    startOffset.current = offsetRef.current;
     positions.current = [{ t: Date.now(), y: touch.clientY }];
     setState("dragging");
-  }, [offset]);
+  }, []);
 
-  const handleTouchMove = React.useCallback(
+  const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.touches[0];
       const dy = startY.current - touch.clientY;
@@ -92,9 +85,13 @@ export function useCurtain(
 
       const rawOffset = startOffset.current + dy;
       const clamped = Math.max(0, Math.min(rawOffset, maxOpen.current));
-      setOffset(clamped);
-      positions.current.push({ t: Date.now(), y: touch.clientY });
 
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        setOffset(clamped);
+      });
+
+      positions.current.push({ t: Date.now(), y: touch.clientY });
       if (positions.current.length > 20) {
         positions.current = positions.current.slice(-20);
       }
@@ -102,29 +99,37 @@ export function useCurtain(
     []
   );
 
-  const handleTouchEnd = React.useCallback(() => {
+  const handleTouchEnd = useCallback(() => {
+    const currentOffset = offsetRef.current;
+    const wasOpen = startOffset.current > maxOpen.current * OPEN_THRESHOLD;
+
     const now = Date.now();
     const velocityPoints = positions.current.filter(
       (p) => now - p.t <= VELOCITY_WINDOW_MS
     );
 
-    let velocity = 0;
+    let signedVelocity = 0;
     if (velocityPoints.length >= 2) {
       const first = velocityPoints[0];
       const last = velocityPoints[velocityPoints.length - 1];
       const dt = last.t - first.t;
       if (dt > 0) {
-        velocity = Math.abs(first.y - last.y) / dt;
+        signedVelocity = (first.y - last.y) / dt;
       }
     }
 
     const threshold = maxOpen.current * OPEN_THRESHOLD;
-    const deltaFromStart = Math.abs(offset - startOffset.current);
+    const absVelocity = Math.abs(signedVelocity);
+    const deltaFromStart = Math.abs(currentOffset - startOffset.current);
     const shouldOpen =
-      offset > threshold || (velocity > FLICK_VELOCITY && deltaFromStart > DEAD_ZONE);
-    const wasOpen = startOffset.current > threshold;
+      currentOffset > threshold || (absVelocity > FLICK_VELOCITY && deltaFromStart > DEAD_ZONE);
+    const isFlickDown = signedVelocity < -FLICK_VELOCITY;
 
-    if (wasOpen && !shouldOpen) {
+    if (wasOpen && isFlickDown) {
+      setOffset(0);
+      setState("idle");
+      onClose();
+    } else if (wasOpen && !shouldOpen) {
       setOffset(0);
       setState("idle");
       onClose();
@@ -135,10 +140,16 @@ export function useCurtain(
         .then(() => setState("loaded"))
         .catch(() => setState("error"));
     } else {
-      setOffset(startOffset.current > 0 ? maxOpen.current : 0);
-      setState(startOffset.current > 0 ? "loaded" : "idle");
+      setOffset(wasOpen ? maxOpen.current : 0);
+      setState(wasOpen ? "loaded" : "idle");
     }
-  }, [offset, onOpen, onClose]);
+  }, [onOpen, onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const isOpen = state === "loading" || state === "loaded" || state === "error";
 

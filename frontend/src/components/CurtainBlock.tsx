@@ -93,17 +93,16 @@ export default function CurtainBlock({
   }, [articleId, blockIndex, getTranslation]);
 
   const handleClose = useCallback(() => {
-    // Keep translation cached, just close visual
+    // Cached translation stays; just close visual
   }, []);
 
   const { curtainProps, state, offset, isOpen } = useCurtain(
     blockHeight,
-    isOpen,
     handleOpen,
     handleClose
   );
 
-  const showTranslation = isOpen && translationText !== null;
+  const showTranslation = state === "loaded" && translationText !== null;
   const showSpinner = state === "loading";
   const showError = state === "error";
 
@@ -132,8 +131,8 @@ export default function CurtainBlock({
         {renderBlockContent(block)}
       </div>
       <div
-        className={`curtain-translation ${showTranslation ? "visible" : ""}`}
-        aria-hidden={!showTranslation}
+        className={`curtain-translation ${isOpen ? "visible" : ""}`}
+        aria-hidden={!isOpen}
       >
         {showSpinner && <div className="curtain-spinner" />}
         {showError && (

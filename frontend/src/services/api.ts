@@ -1,3 +1,10 @@
+/**
+ * # @module: api-client
+ *
+ * Frontend API client for NewVision.
+ * Types, fetch functions for articles and translations.
+ */
+
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 export interface HeadingBlock {
@@ -95,18 +102,29 @@ export async function fetchBlockTranslation(
   articleId: string,
   blockIndex: number
 ): Promise<string> {
-  const response = await fetch(`${API_BASE}/translate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ article_id: articleId, block_index: blockIndex }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-  if (!response.ok) {
-    throw new Error(`Translation failed: ${response.statusText}`);
+  try {
+    const response = await fetch(`${API_BASE}/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ article_id: articleId, block_index: blockIndex }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Translation failed: ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as TranslateResponse;
+    if (data.error) {
+      throw new Error(data.translated_text || "Translation error");
+    }
+    return data.translated_text;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = (await response.json()) as TranslateResponse;
-  return data.translated_text;
 }
 
 export async function fetchBlockTranslationBatch(
@@ -115,19 +133,27 @@ export async function fetchBlockTranslationBatch(
 ): Promise<string[]> {
   if (blockIndices.length === 0) return [];
 
-  const response = await fetch(`${API_BASE}/translate/batch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      article_id: articleId,
-      block_indices: blockIndices,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-  if (!response.ok) {
-    throw new Error(`Batch translation failed: ${response.statusText}`);
+  try {
+    const response = await fetch(`${API_BASE}/translate/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        article_id: articleId,
+        block_indices: blockIndices,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Batch translation failed: ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as BatchTranslateResponse;
+    return data.translations.map((t) => t.translated_text);
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = (await response.json()) as BatchTranslateResponse;
-  return data.translations.map((t) => t.translated_text);
 }

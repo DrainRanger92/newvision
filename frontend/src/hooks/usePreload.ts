@@ -1,9 +1,9 @@
 /**
  * # @module: usePreload
  * IntersectionObserver-based translation preloader.
- * Returns a sentinelRef to attach to the last block.
- * When sentinel enters viewport (200px margin),
- * debounced 300ms → preload next 3 untranslated blocks.
+ * Returns a sentinelRef to attach at the end of the block list.
+ * When sentinel enters viewport (200px margin), preloads next 3 uncached blocks.
+ * Tracks progress via a cursor ref to avoid re-preloading blocks.
  */
 
 import { useEffect, useRef, useCallback } from "react";
@@ -16,13 +16,18 @@ const ROOT_MARGIN = "200px";
 export function usePreload(
   articleId: string,
   blocks: Block[],
-  currentIndex: number,
   preloadFn: (articleId: string, indices: number[]) => Promise<void>,
   isTranslatableFn: (block: Block) => boolean
 ) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const preloadedRef = useRef<Set<number>>(new Set());
+  const cursorRef = useRef(0);
+  const preloadedSetRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    cursorRef.current = 0;
+    preloadedSetRef.current = new Set();
+  }, [articleId]);
 
   const schedulePreload = useCallback(() => {
     if (timerRef.current) {
@@ -30,28 +35,26 @@ export function usePreload(
     }
 
     timerRef.current = setTimeout(() => {
-      const start = currentIndex + 1;
       const candidates: number[] = [];
+      let i = cursorRef.current;
 
-      for (let i = start; i < blocks.length && candidates.length < LOOK_AHEAD; i++) {
-        if (
-          isTranslatableFn(blocks[i]) &&
-          !preloadedRef.current.has(i)
-        ) {
+      while (i < blocks.length && candidates.length < LOOK_AHEAD) {
+        if (isTranslatableFn(blocks[i]) && !preloadedSetRef.current.has(i)) {
           candidates.push(i);
-          preloadedRef.current.add(i);
+          preloadedSetRef.current.add(i);
         }
+        i++;
       }
+
+      cursorRef.current = i;
 
       if (candidates.length > 0) {
-        preloadFn(articleId, candidates);
+        preloadFn(articleId, candidates).catch(() => {
+          /* fire-and-forget: errors handled by useTranslation cache */
+        });
       }
     }, DEBOUNCE_MS);
-  }, [articleId, blocks, currentIndex, preloadFn, isTranslatableFn]);
-
-  useEffect(() => {
-    preloadedRef.current = new Set();
-  }, [articleId]);
+  }, [articleId, blocks, preloadFn, isTranslatableFn]);
 
   useEffect(() => {
     const el = sentinelRef.current;
