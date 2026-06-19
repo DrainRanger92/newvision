@@ -20,6 +20,7 @@ contract: All endpoints return valid JSON; health always responds 200; parse and
 import asyncio
 import logging
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -50,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_db(settings.db_path)
     bot_task = asyncio.create_task(start_bot_polling())
     yield

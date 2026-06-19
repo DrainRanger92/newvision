@@ -90,7 +90,6 @@ def _build_translation_prompt(text: str) -> list[dict]:
 
 
 def _build_batch_prompt(texts: list[str]) -> list[dict]:
-    separator = "\n\n---BLOCK {i}---\n\n"
     parts = []
     for i, t in enumerate(texts):
         parts.append(f"---BLOCK {i}---\n\n{t}")

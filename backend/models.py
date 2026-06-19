@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class BlockType(StrEnum):
@@ -79,22 +79,12 @@ Block = Annotated[
 ]
 
 
-def _generate_uuid() -> str:
-    return str(uuid.uuid4())
-
-
 class Article(BaseModel):
-    id: str = ""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     url: str
     title: str
     blocks: list[Block] = []
-    fetched_at: datetime | None = None
-
-    def model_post_init(self, __context) -> None:
-        if not self.id:
-            self.id = str(uuid.uuid4())
-        if self.fetched_at is None:
-            self.fetched_at = datetime.now(UTC)
+    fetched_at: datetime | None = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ParseRequest(BaseModel):

@@ -109,10 +109,6 @@ def extract_content(html: str, url: str) -> tuple[str, str]:
     return title, cleaned
 
 
-def _get_text_content(el: Tag) -> str:
-    return el.get_text(strip=True)
-
-
 def classify_blocks(cleaned_html: str) -> list[Block]:
     soup = BeautifulSoup(cleaned_html, "lxml")
     blocks: list[Block] = []
