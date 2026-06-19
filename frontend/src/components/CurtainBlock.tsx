@@ -136,7 +136,7 @@ export default function CurtainBlock({
       >
         {showSpinner && <div className="curtain-spinner" />}
         {showError && (
-          <p className="curtain-error">[CurtainBlock] Translation unavailable</p>
+          <p className="curtain-error">Translation unavailable</p>
         )}
         {showTranslation && <p>{translationText}</p>}
       </div>

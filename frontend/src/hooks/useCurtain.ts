@@ -1,5 +1,3 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
-
 /**
  * # @module: useCurtain
  * Touch gesture engine for CurtainBlock.
@@ -7,6 +5,8 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
  * evaluates threshold + flick velocity, triggers snap open/close.
  * Supports both open→close (swipe down) and close→open (swipe up) gestures.
  */
+
+import React, { useRef, useState, useEffect, useCallback } from "react";
 
 export type CurtainState = "idle" | "dragging" | "loading" | "loaded" | "error";
 
@@ -35,7 +35,7 @@ export const SNAP_DURATION_MS = 250;
 function horizontalGate(dx: number, dy: number): boolean {
   if (Math.abs(dy) < 1) return true;
   const angle = Math.abs(Math.atan2(Math.abs(dx), Math.abs(dy)) * (180 / Math.PI));
-  return angle > 90 - HORIZONTAL_GATE_DEG;
+  return angle > HORIZONTAL_GATE_DEG;
 }
 
 export function useCurtain(

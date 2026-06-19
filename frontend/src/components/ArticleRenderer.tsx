@@ -7,7 +7,6 @@
  * Integrates preloading via IntersectionObserver sentinel.
  */
 
-import DOMPurify from "dompurify";
 import type { Article, Block, HeadingBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import CurtainBlock from "./CurtainBlock";

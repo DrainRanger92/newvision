@@ -1,15 +1,15 @@
-import React, { createContext, useContext, useCallback, useRef } from "react";
-import {
-  fetchBlockTranslation,
-  fetchBlockTranslationBatch,
-} from "../services/api";
-
 /**
  * # @module: useTranslation
  * React Context providing a shared translation cache.
  * Uses Map<string, string> keyed by articleId:blockIndex.
  * Deduplicates in-flight requests. Error responses cached.
  */
+
+import React, { createContext, useContext, useCallback, useRef } from "react";
+import {
+  fetchBlockTranslation,
+  fetchBlockTranslationBatch,
+} from "../services/api";
 
 interface TranslationContextValue {
   getTranslation: (articleId: string, blockIndex: number) => Promise<string>;
