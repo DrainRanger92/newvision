@@ -450,9 +450,28 @@ These checks are safe to skip locally — they only matter in CI:
     Каждый доступ по индексу (`arr[i]`, `obj[k]`) требут null-guard. Каждый импорт — используется.
     CI gate G15 существует именно для этого. Не полагаться на CI как на первую линию обороны.
 
-15. **Pre-build verification**. Перед любым push — локально запустить `npm run build` (frontend)
-    и `PYTHONPATH=backend python -m pytest` (backend). Если build или тесты падают — чинить до push-а.
-    CI должен найти ноль новых ошибок. Единственное исключение — платформенные gap-ы (ENV-007).
+15. **Git hooks — hard constraint**. Настроены `gates/git-agent.sh` + `pre-commit`/`pre-push` хуки.
+    - **pre-commit**: TypeScript typecheck (`tsc --noEmit`) на изменённых файлах
+    - **pre-push**: полная сборка (`npm run build`) + Python тесты (`pytest`)
+    - Коммиты с ошибками типов или упавшими тестами **физически блокируются**.
+    - При ошибке хука — прочитать вывод, исправить код, повторить коммит.
+    - Единственное исключение — известный платформенный gap (ENV-007), задокументированный в LogCraft.
+
+16. **`gates/git-agent.sh` — обязателен для агентов**. Никогда не использовать bare `git commit` или `git push`.
+    Всегда: `gates/git-agent.sh commit -m "..."` и `gates/git-agent.sh push origin branch`.
+    Флаг `--no-verify` физически заблокирован в обёртке.
+
+### Инitialization Checklist (для кодеров)
+
+Перед написанием любого кода — выполнить (если оркестратор не предоставил конфиги явно):
+
+- [ ] Прочитать `frontend/tsconfig.json` — запомнить `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`
+- [ ] Прочитать `frontend/package.json` → `scripts.build` / `scripts.typecheck`
+- [ ] Прочитать `backend/pyproject.toml` или `.ruff.toml` — правила линтинга
+- [ ] Убедиться, что `gates/setup-hooks.sh` выполнен (хуки установлены)
+- [ ] Проверить, что `gates/git-agent.sh` в `$PATH` или доступен по относительному пути
+
+Если какой-то конфиг не найден — запросить у оркестратора. Не гадать значение.
 
 ## Open Questions (собираем здесь)
 
