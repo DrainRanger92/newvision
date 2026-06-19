@@ -23,7 +23,6 @@ from backend.models import (
     QuoteBlock,
     TranslateRequest,
     TranslateResponse,
-    _generate_uuid,
 )
 
 
@@ -180,27 +179,6 @@ class TestBlockDiscriminatedUnion:
         block = expected_type(**data)
         assert isinstance(block, expected_type)
         assert block.type.value == data["type"]
-
-
-# ── _generate_uuid helper ──────────────────────────────────────────────
-
-
-class TestGenerateUUID:
-    """_generate_uuid returns valid UUIDs."""
-
-    def test_returns_string(self) -> None:
-        uid = _generate_uuid()
-        assert isinstance(uid, str)
-
-    def test_valid_uuid_format(self) -> None:
-        uid = _generate_uuid()
-        assert re.match(
-            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", uid
-        )
-
-    def test_unique(self) -> None:
-        ids = {_generate_uuid() for _ in range(100)}
-        assert len(ids) == 100
 
 
 # ── Article ────────────────────────────────────────────────────────────

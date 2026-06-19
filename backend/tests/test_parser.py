@@ -3,7 +3,6 @@ Tests for backend/parser.py — URL normalization, HTML extraction, block classi
 error handling, and fetch mocking.
 """
 
-from pathlib import PosixPath
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -23,7 +22,6 @@ from backend.parser import (
     ParseError,
     _classify_element,
     _detect_language,
-    _get_text_content,
     _inner_html,
     _normalize_url,
     classify_blocks,

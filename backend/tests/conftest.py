@@ -28,7 +28,7 @@ def sample_heading_html() -> str:
 
 
 @pytest.fixture
-ndef sample_paragraph_html() -> str:
+def sample_paragraph_html() -> str:
     return "<p>This is a <strong>test</strong> paragraph.</p>"
 
 
