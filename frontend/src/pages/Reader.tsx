@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import WebApp from "@twa-dev/sdk";
 import type { Article } from "../services/api";
 import { fetchArticle } from "../services/api";
 import { TranslationProvider } from "../hooks/useTranslation";
@@ -48,8 +49,14 @@ export default function Reader() {
 
     load();
 
+    WebApp.BackButton.show();
+    const handleBack = () => WebApp.close();
+    WebApp.BackButton.onClick(handleBack);
+
     return () => {
       cancelled = true;
+      WebApp.BackButton.offClick(handleBack);
+      WebApp.BackButton.hide();
     };
   }, [id]);
 
