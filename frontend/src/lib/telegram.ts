@@ -9,6 +9,7 @@ export function initTelegram(): boolean {
       WebApp.ready();
       WebApp.expand();
       applyTheme();
+      WebApp.onEvent("themeChanged", applyTheme);
       return true;
     }
   } catch {

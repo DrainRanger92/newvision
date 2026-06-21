@@ -10,6 +10,7 @@
 import type { Article, Block, HeadingBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import CurtainBlock from "./CurtainBlock";
+import SwipeHint from "./SwipeHint";
 import { usePreload } from "../hooks/usePreload";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -34,6 +35,7 @@ export default function ArticleRenderer({ article }: Props) {
   return (
     <article className="article">
       <h1 className="article-title">{article.title}</h1>
+      <SwipeHint />
       <div className="article-blocks">
         {article.blocks.map((block, index) => {
           if (isTitleBlock(block)) {
