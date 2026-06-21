@@ -544,3 +544,17 @@ bash gates/context-guard.sh M4      # G17: verify no out-of-scope file modificat
 # Budget
 python gates/budget-calc.py         # Recalculate CostPerAcceptedChange
 ```
+
+## Known Pitfalls
+
+### MCP Stale Token (two-token workflow)
+The `server-github` MCP process is long-lived (days). It reads `GITHUB_PERSONAL_ACCESS_TOKEN` from environment ONLY at startup. If token changes mid-session, MCP continues with old token.
+
+**Symptom:** MCP GitHub tools create commits from `DrainRanger92` instead of `newoxygensolutions92`.
+
+**Fix:** Kill the process (`wmic process where "commandline like '%server-github%'" get processid` → `taskkill //F //PID <id>`). Hermes auto-restarts with fresh token on next MCP call.
+
+### Git Data API Fallback
+When MCP is unavailable (stale token, session restart needed), use GitHub Git Data API:
+1. Create blobs → Create tree → Create commit → Update branch ref → Create PR
+2. CI does NOT trigger on Git Data API pushes — use close/reopen PR to trigger CI
