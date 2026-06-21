@@ -11,6 +11,7 @@ import WebApp from "@twa-dev/sdk";
 import type { Article } from "../services/api";
 import { fetchArticle } from "../services/api";
 import { TranslationProvider } from "../hooks/useTranslation";
+import { isInsideTelegram } from "../lib/telegram";
 import ArticleRenderer from "../components/ArticleRenderer";
 
 export default function Reader() {
@@ -49,14 +50,21 @@ export default function Reader() {
 
     load();
 
-    WebApp.BackButton.show();
+    const tgAvailable = isInsideTelegram();
+    if (tgAvailable) {
+      WebApp.BackButton.show();
+    }
     const handleBack = () => WebApp.close();
-    WebApp.BackButton.onClick(handleBack);
+    if (tgAvailable) {
+      WebApp.BackButton.onClick(handleBack);
+    }
 
     return () => {
       cancelled = true;
-      WebApp.BackButton.offClick(handleBack);
-      WebApp.BackButton.hide();
+      if (tgAvailable) {
+        WebApp.BackButton.offClick(handleBack);
+        WebApp.BackButton.hide();
+      }
     };
   }, [id]);
 

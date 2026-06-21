@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { isInsideTelegram } from "../lib/telegram";
 
 const STORAGE_KEY = "nv-swipe-hint-shown";
 
 export default function SwipeHint() {
+  if (!isInsideTelegram()) return null;
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
