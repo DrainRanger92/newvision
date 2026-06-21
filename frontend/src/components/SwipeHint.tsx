@@ -30,5 +30,5 @@ export default function SwipeHint() {
 
   if (!visible) return null;
 
-  return <div className="swipe-hint">{chr(0x1F446)} Swipe up to translate</div>;
+  return <div className="swipe-hint">👆 Swipe up to translate</div>;
 }
