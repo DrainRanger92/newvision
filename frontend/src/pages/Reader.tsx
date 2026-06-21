@@ -7,9 +7,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import WebApp from "@twa-dev/sdk";
 import type { Article } from "../services/api";
 import { fetchArticle } from "../services/api";
 import { TranslationProvider } from "../hooks/useTranslation";
+import { isInsideTelegram } from "../lib/telegram";
 import ArticleRenderer from "../components/ArticleRenderer";
 
 export default function Reader() {
@@ -48,8 +50,21 @@ export default function Reader() {
 
     load();
 
+    const tgAvailable = isInsideTelegram();
+    if (tgAvailable) {
+      WebApp.BackButton.show();
+    }
+    const handleBack = () => WebApp.close();
+    if (tgAvailable) {
+      WebApp.BackButton.onClick(handleBack);
+    }
+
     return () => {
       cancelled = true;
+      if (tgAvailable) {
+        WebApp.BackButton.offClick(handleBack);
+        WebApp.BackButton.hide();
+      }
     };
   }, [id]);
 

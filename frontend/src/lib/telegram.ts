@@ -9,6 +9,7 @@ export function initTelegram(): boolean {
       WebApp.ready();
       WebApp.expand();
       applyTheme();
+      WebApp.onEvent("themeChanged", applyTheme);
       return true;
     }
   } catch {
@@ -32,4 +33,5 @@ export function applyTheme(): void {
   root.style.setProperty("--tg-secondary-bg-color", theme.secondary_bg_color || "#f0f0f0");
   root.style.setProperty("--tg-button-color", theme.button_color || "#2481cc");
   root.style.setProperty("--tg-button-text-color", theme.button_text_color || "#ffffff");
+  root.style.setProperty("--tg-error-color", "#e74c3c");
 }

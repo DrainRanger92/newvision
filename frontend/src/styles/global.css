@@ -1,3 +1,5 @@
+/* ── Reset ── */
+
 *,
 *::before,
 *::after {
@@ -18,15 +20,22 @@ body {
   color: var(--tg-text-color, #1a1a1a);
   background-color: var(--tg-bg-color, #ffffff);
   overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
+
+/* ── App ── */
 
 .app {
   max-width: 640px;
   margin: 0 auto;
   padding: 1rem;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
 
-/* ── Telegram theme CSS variables ── */
+/* ── Theme Variables ── */
 
 :root {
   --tg-bg-color: #ffffff;
@@ -36,15 +45,26 @@ body {
   --tg-secondary-bg-color: #f0f0f0;
   --tg-button-color: #2481cc;
   --tg-button-text-color: #ffffff;
+  --tg-error-color: #e74c3c;
 }
 
-/* ── Reader ── */
+/* ── Article ── */
 
 .article {
   max-width: 640px;
   margin: 0 auto;
   padding: 1rem;
+  animation: fadeIn 300ms ease-out;
 }
+
+/* ── Animations ── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Article Title ── */
 
 .article-title {
   font-size: 1.5rem;
@@ -54,9 +74,13 @@ body {
   color: var(--tg-text-color, #1a1a1a);
 }
 
+/* ── Blocks ── */
+
 .article-blocks > * + * {
   margin-top: 1rem;
 }
+
+/* ── Paragraph ── */
 
 .paragraph {
   font-size: 1rem;
@@ -87,7 +111,7 @@ body {
 .heading-5 { font-size: 1rem; }
 .heading-6 { font-size: 0.95rem; }
 
-/* ── Code blocks ── */
+/* ── Code Blocks ── */
 
 .code-block-wrapper {
   position: relative;
@@ -160,7 +184,7 @@ body {
   list-style-type: decimal;
 }
 
-/* ── Quotes ── */
+/* ── Quote ── */
 
 .quote {
   border-left: 3px solid var(--tg-link-color, #2481cc);
@@ -170,7 +194,7 @@ body {
   color: var(--tg-hint-color, #999999);
 }
 
-/* ── Loading / Error states ── */
+/* ── Reader Status ── */
 
 .reader-status {
   display: flex;
@@ -184,7 +208,7 @@ body {
 }
 
 .reader-error {
-  color: #e74c3c;
+  color: var(--tg-error-color, #e74c3c);
 }
 
 .spinner {
@@ -201,7 +225,7 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ── M5: Curtain UX ── */
+/* ── Curtain ── */
 
 .curtain-container {
   position: relative;
@@ -229,7 +253,7 @@ body {
   opacity: 0;
   font-size: inherit;
   line-height: inherit;
-  color: var(--tg-hint-color, #666);
+  color: var(--tg-hint-color, #999999);
   font-style: italic;
   transition: opacity 200ms ease-out;
 }
@@ -253,7 +277,20 @@ body {
 }
 
 .curtain-error {
-  color: #e74c3c;
+  color: var(--tg-error-color, #e74c3c);
   font-style: italic;
   font-size: 0.9rem;
+}
+
+/* ── Swipe Hint ── */
+
+.swipe-hint {
+  text-align: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--tg-hint-color, #999999);
+  background-color: var(--tg-secondary-bg-color, #f0f0f0);
+  border-radius: 0.5rem;
+  animation: fadeIn 300ms ease-out;
 }
