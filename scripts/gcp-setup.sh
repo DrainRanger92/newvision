@@ -34,7 +34,6 @@ fi
 info "Authenticated as $ACCOUNT"
 
 BILLING=$(gcloud billing projects list --filter="projectId:$PROJECT_ID" --format="value(billingEnabled)" 2>/dev/null || true)
-# Even if project doesn't exist yet, check that we have a billing account to use
 BILLING_ACCT=$(gcloud billing accounts list --filter=open=true --format="value(name)" --limit=1 2>/dev/null || true)
 if [[ -z "$BILLING_ACCT" ]]; then
   error "No active billing account found. Link one at https://console.cloud.google.com/billing"
@@ -139,15 +138,16 @@ info "🔑  Step 6/6: Cloud Build SA IAM"
 
 CLOUDBUILD_SA="$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")@cloudbuild.gserviceaccount.com"
 
-# Retry loop: SA may not exist immediately after enabling API
-info "Waiting for Cloud Build SA to propagate..."
-for i in $(seq 1 12); do
+# Retry loop: SA may take several minutes on a fresh project
+info "Waiting for Cloud Build SA to propagate (up to 3 min)..."
+for i in $(seq 1 36); do
   if gcloud iam service-accounts describe "$CLOUDBUILD_SA" &>/dev/null; then
     info "Cloud Build SA found after ${i}s"
     break
   fi
-  if [[ "$i" -eq 12 ]]; then
-    error "Cloud Build SA did not appear after 60s. Check: gcloud iam service-accounts list"
+  if [[ "$i" -eq 36 ]]; then
+    error "Cloud Build SA did not appear after 180s."
+    error "Check manually: gcloud iam service-accounts list --project=$PROJECT_ID"
     exit 1
   fi
   sleep 5
