@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 _db: aiosqlite.Connection | None = None
 
 
-async def init_db(db_path: str = "data/curtain_reader.db") -> None:
+async def init_db(db_path: str) -> None:
     global _db
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     _db = await aiosqlite.connect(db_path)
