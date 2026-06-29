@@ -56,8 +56,8 @@ Thumbs.db
 
 | Шаг | Название | Команда |
 |-----|----------|---------|
-| 1 | `build` | `docker build -t $AR_IMAGE:$SHORT_SHA -t $AR_IMAGE:latest .` |
-| 2 | `push` | `docker push $AR_IMAGE --all-tags` |
+| 1 | `build` | `docker build -f backend/Dockerfile -t $_AR_IMAGE:$SHORT_SHA -t $_AR_IMAGE:latest .` |
+| 2 | `push` | `docker push $_AR_IMAGE --all-tags` |
 | 3 | `deploy` | `gcloud run deploy newvision-backend ...` |
 
 **Переменные подстановки Cloud Build:**
@@ -67,13 +67,24 @@ Thumbs.db
 | `$PROJECT_ID` | `newvision-telegram` | авто (gcloud config) |
 | `$SHORT_SHA` | первые 7 символов хеша коммита | авто |
 | `$LOCATION` | `europe-west1` | `--region` при запуске |
-| `$AR_IMAGE` | `$LOCATION-docker.pkg.dev/$PROJECT_ID/newvision/backend` | вычисляется |
+| `$_AR_IMAGE` | `$LOCATION-docker.pkg.dev/$PROJECT_ID/newvision/backend` | вычисляется в substitutions |
+
+**В cloudbuild.yaml переменные объявляются через `substitutions:`:**
+
+```yaml
+substitutions:
+  _LOCATION: europe-west1
+  _AR_IMAGE: ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/newvision/backend
+```
+
+`$PROJECT_ID` и `$SHORT_SHA` — встроенные подстановки Cloud Build, объявлять не нужно.
+`$LOCATION` и `$_AR_IMAGE` — кастомные (префикс `_`), передаются при запуске или берутся из `--region`.
 
 **Параметры Cloud Run:**
 
 ```
 gcloud run deploy newvision-backend \
-  --image=$LOCATION-docker.pkg.dev/$PROJECT_ID/newvision/backend:$SHORT_SHA \
+  --image=$_AR_IMAGE:$SHORT_SHA \
   --region=$LOCATION \
   --platform=managed \
   --port=8000 \
@@ -84,14 +95,21 @@ gcloud run deploy newvision-backend \
   --max-instances=3 \
   --concurrency=80 \
   --set-env-vars=BOT_ENABLED=false \
+  --set-secrets=DEEPSEEK_API_KEY=DEEPSEEK_API_KEY:latest,BOT_TOKEN=BOT_TOKEN:latest \
   --allow-unauthenticated \
   --quiet
 ```
+
+> **Важно:** secrets (`DEEPSEEK_API_KEY`, `BOT_TOKEN`) должны быть созданы в Secret Manager **до первого деплоя** (см. issue #51). Пока secrets не созданы — `--set-secrets` вызовет ошибку деплоя. Альтернатива: временно передать ключи через `--set-env-vars` для тестового запуска.
 
 ### Secrets
 
 `DEEPSEEK_API_KEY` и `BOT_TOKEN` — через `--set-secrets` из Secret Manager.
 Cloud Build SA уже имеет `roles/secretmanager.secretAccessor` (настроено в `gcp-setup.sh`).
+
+**⚠️ Pre-requisite:** secrets должны быть созданы в Secret Manager **до первого деплоя**.
+См. issue #51 — `gcloud secrets create deepseek-api-key` и `gcloud secrets create bot-token`.
+Пока secrets не созданы, используй `--set-env-vars` для тестового запуска.
 
 Пока `BOT_ENABLED=false` — деплоим только API (без бота).
 
