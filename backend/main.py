@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import os
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -47,8 +48,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         bot_task = asyncio.create_task(start_bot_polling())
         logger.info("[Main] Bot mode: polling")
     else:
-        webhook_bot = await register_webhook()
-        app.include_router(webhook_router)
+        try:
+            webhook_bot = await register_webhook()
+        except Exception:
+            logger.exception("[Main] Failed to register webhook")
+            webhook_bot = None
+        if webhook_bot is not None:
+            app.include_router(webhook_router)
         logger.info("[Main] Bot mode: webhook")
 
     yield
@@ -84,11 +90,12 @@ app.add_middleware(
 
 # Serve frontend static files (production mode)
 if settings.serve_static:
-    import os
     static_path = settings.static_dir
     if os.path.isdir(static_path):
         app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
         logger.info("[Main] Serving static files from %s", static_path)
+    else:
+        logger.warning("[Main] Static directory '%s' not found, skipping", static_path)
 
 
 @app.get("/health")
