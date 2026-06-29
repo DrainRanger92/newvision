@@ -31,6 +31,7 @@ steps:
       - --max-instances=3
       - --concurrency=80
       - --set-env-vars=BOT_ENABLED=false
+      - --set-secrets=DEEPSEEK_API_KEY=DEEPSEEK_API_KEY_SECRET:latest,BOT_TOKEN=BOT_TOKEN_SECRET:latest
       - --allow-unauthenticated
       - --quiet
 substitutions:
