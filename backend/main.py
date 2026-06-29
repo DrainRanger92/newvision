@@ -53,8 +53,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         except Exception:
             logger.exception("[Main] Failed to register webhook")
             webhook_bot = None
-        if webhook_bot is not None:
-            app.include_router(webhook_router)
         logger.info("[Main] Bot mode: webhook")
 
     yield
@@ -88,7 +86,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Webhook router — always mounted; only receives updates when webhook is registered
+# with Telegram. Lifespan handles registration on startup, removal on shutdown.
+# Note: include_router outside lifespan is intentional — FastAPI reads routes at
+# request time, not frozen at app creation, so this works identically either way.
+app.include_router(webhook_router)
+
 # Serve frontend static files (production mode)
+# Mounted after API routes intentionally: Starlette checks regular routes BEFORE
+# mounted apps, so /api/* endpoints take priority over the SPA catch-all.
 if settings.serve_static:
     static_path = settings.static_dir
     if os.path.isdir(static_path):

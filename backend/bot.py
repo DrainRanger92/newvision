@@ -4,7 +4,7 @@
 
 import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
@@ -20,6 +20,14 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 _URL_REGEX = re.compile(r"^(https?://[^\s]+)", re.IGNORECASE)
+
+# Webhook Bot singleton — shared between register_webhook() and webhook.py
+_webhook_bot: Bot | None = None
+
+
+def get_webhook_bot() -> Bot | None:
+    """Return the Bot instance created by register_webhook(), if any."""
+    return _webhook_bot
 
 
 @router.message(Command("start"))
@@ -108,9 +116,12 @@ async def start_bot_polling() -> None:
 async def register_webhook() -> Bot | None:
     """Register a Telegram webhook for Cloud Run / serverless deployments.
 
-    Returns the created Bot instance (so the caller can close its session on
-    shutdown), or None if the bot is disabled or misconfigured.
+    Stores the created Bot as a module-level singleton (accessible via
+    get_webhook_bot()) so webhook.py does not create a second instance.
+    Returns the Bot, or None if the bot is disabled or misconfigured.
     """
+    global _webhook_bot
+
     if not settings.bot_enabled:
         logger.info("[Bot] Bot is disabled (BOT_ENABLED=false). Skipping webhook registration.")
         return None
@@ -123,15 +134,20 @@ async def register_webhook() -> Bot | None:
         logger.warning("[Bot] WEBHOOK_URL is empty. Webhook will not be registered.")
         return None
 
-    full_url = settings.webhook_url.rstrip("/") + settings.webhook_path
-    bot = create_bot()
-    await bot.set_webhook(full_url, drop_pending_updates=True)
+    full_url = urljoin(settings.webhook_url.rstrip("/") + "/", settings.webhook_path.lstrip("/"))
+    _webhook_bot = create_bot()
+    await _webhook_bot.set_webhook(
+        full_url,
+        secret_token=settings.bot_token,
+        drop_pending_updates=False,
+    )
     logger.info("[Bot] Webhook registered: %s", full_url)
-    return bot
+    return _webhook_bot
 
 
 async def delete_webhook(bot: Bot | None) -> None:
     """Delete a previously registered Telegram webhook and close the session."""
+    global _webhook_bot
     if bot is None:
         return
     try:
@@ -139,3 +155,4 @@ async def delete_webhook(bot: Bot | None) -> None:
         logger.info("[Bot] Webhook deleted.")
     finally:
         await bot.session.close()
+    _webhook_bot = None

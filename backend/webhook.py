@@ -9,29 +9,37 @@ from fastapi.responses import JSONResponse
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
 
-from backend.bot import create_bot, create_dispatcher
+from backend.bot import create_dispatcher, get_webhook_bot
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_bot: Bot | None = None
+# Bot is created by register_webhook() in bot.py — singletons shared via get_webhook_bot()
 _dispatcher: Dispatcher | None = None
 
 
 async def _get_bot_and_dispatcher() -> tuple[Bot, Dispatcher]:
-    """Lazily initialise bot + dispatcher singletons for webhook handling."""
-    global _bot, _dispatcher
-    if _bot is None:
-        _bot = create_bot()
+    """Lazily initialise dispatcher singleton; bot comes from bot.py's register_webhook()."""
+    global _dispatcher
+    bot = get_webhook_bot()
+    if bot is None:
+        raise RuntimeError("Webhook bot not initialized — register_webhook() must be called first")
     if _dispatcher is None:
         _dispatcher = create_dispatcher()
-    return _bot, _dispatcher
+    return bot, _dispatcher
 
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request) -> JSONResponse:
     """Receive a Telegram Update and feed it into the aiogram dispatcher."""
+    # Verify secret token (Telegram sends X-Telegram-Bot-Api-Secret-Token)
+    secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+    if secret_token != settings.bot_token:
+        logger.warning("[Webhook] Invalid or missing secret token")
+        return JSONResponse(status_code=403, content={"status": "error", "detail": "invalid secret token"})
+
     bot, dp = await _get_bot_and_dispatcher()
     try:
         payload = await request.json()
