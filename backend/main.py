@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.bot import start_bot_polling
+from backend.bot import delete_webhook, register_webhook, start_bot_polling
 from backend.config import settings
 from backend.db import close_db, get_article_by_id, get_article_by_url, init_db, save_article
 from backend.models import (
@@ -27,6 +27,8 @@ from backend.models import (
 )
 from backend.parser import ParseError, parse_article
 from backend.translator import TranslationError, translate_block, translate_blocks_batch
+from backend.webhook import router as webhook_router
+from backend.webhook import shutdown_webhook_singletons
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,14 +39,32 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan: route bot startup/shutdown by settings.bot_mode."""
     await init_db(settings.db_path)
-    bot_task = asyncio.create_task(start_bot_polling())
+
+    webhook_bot = None
+    if settings.bot_mode == "polling":
+        bot_task = asyncio.create_task(start_bot_polling())
+        logger.info("[Main] Bot mode: polling")
+    else:
+        webhook_bot = await register_webhook()
+        app.include_router(webhook_router)
+        logger.info("[Main] Bot mode: webhook")
+
     yield
-    bot_task.cancel()
-    try:
-        await bot_task
-    except asyncio.CancelledError:
-        pass
+
+    if settings.bot_mode == "polling":
+        bot_task.cancel()
+        try:
+            await bot_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("[Main] Polling stopped.")
+    else:
+        await delete_webhook(webhook_bot)
+        await shutdown_webhook_singletons()
+        logger.info("[Main] Webhook removed.")
+
     await close_db()
 
 

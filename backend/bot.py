@@ -90,6 +90,7 @@ def create_dispatcher() -> Dispatcher:
 
 
 async def start_bot_polling() -> None:
+    """Start the bot in long-polling mode (local development)."""
     if not settings.bot_enabled:
         logger.info("[Bot] Bot is disabled (BOT_ENABLED=false). Skipping polling.")
         return
@@ -102,3 +103,39 @@ async def start_bot_polling() -> None:
     bot = create_bot()
     dp = create_dispatcher()
     await dp.start_polling(bot)
+
+
+async def register_webhook() -> Bot | None:
+    """Register a Telegram webhook for Cloud Run / serverless deployments.
+
+    Returns the created Bot instance (so the caller can close its session on
+    shutdown), or None if the bot is disabled or misconfigured.
+    """
+    if not settings.bot_enabled:
+        logger.info("[Bot] Bot is disabled (BOT_ENABLED=false). Skipping webhook registration.")
+        return None
+
+    if not settings.bot_token:
+        logger.warning("[Bot] BOT_TOKEN is empty. Webhook will not be registered.")
+        return None
+
+    if not settings.webhook_url:
+        logger.warning("[Bot] WEBHOOK_URL is empty. Webhook will not be registered.")
+        return None
+
+    full_url = settings.webhook_url.rstrip("/") + settings.webhook_path
+    bot = create_bot()
+    await bot.set_webhook(full_url, drop_pending_updates=True)
+    logger.info("[Bot] Webhook registered: %s", full_url)
+    return bot
+
+
+async def delete_webhook(bot: Bot | None) -> None:
+    """Delete a previously registered Telegram webhook and close the session."""
+    if bot is None:
+        return
+    try:
+        await bot.delete_webhook()
+        logger.info("[Bot] Webhook deleted.")
+    finally:
+        await bot.session.close()
