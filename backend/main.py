@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.bot import start_bot_polling
 from backend.config import settings
@@ -60,6 +61,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve frontend static files (production mode)
+if settings.serve_static:
+    import os
+    static_path = settings.static_dir
+    if os.path.isdir(static_path):
+        app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
+        logger.info("[Main] Serving static files from %s", static_path)
 
 
 @app.get("/health")
