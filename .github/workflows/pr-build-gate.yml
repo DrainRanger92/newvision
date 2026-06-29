@@ -25,12 +25,12 @@ jobs:
         if: success()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=success --field context="validate-python" --field description="Python validation passed"
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} --field state=success --field context="validate-python" --field description="Python validation passed"
       - name: Report commit status failure
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=failure --field context="validate-python" --field description="Python validation failed"
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} --field state=failure --field context="validate-python" --field description="Python validation failed"
 
   # ── Frontend validation: npm ci + npm run build ────────────────────
   validate-frontend:
@@ -43,9 +43,9 @@ jobs:
         if: success()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=success --field context="validate-frontend" --field description="Frontend build passed"
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} --field state=success --field context="validate-frontend" --field description="Frontend build passed"
       - name: Report commit status failure
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api repos/${{ github.repository }}/statuses/${{ github.sha }} --field state=failure --field context="validate-frontend" --field description="Frontend build failed"
+        run: gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} --field state=failure --field context="validate-frontend" --field description="Frontend build failed"
