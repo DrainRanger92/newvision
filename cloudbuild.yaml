@@ -1,0 +1,40 @@
+steps:
+  - name: "docker"
+    args:
+      - build
+      - -f
+      - backend/Dockerfile
+      - -t
+      - $_AR_IMAGE:$SHORT_SHA
+      - -t
+      - $_AR_IMAGE:latest
+      - .
+  - name: "docker"
+    args:
+      - push
+      - $_AR_IMAGE
+      - --all-tags
+  - name: "gcr.io/google.com/cloudsdktool/google-cloud-cli"
+    args:
+      - gcloud
+      - run
+      - deploy
+      - newvision-backend
+      - --image=$_AR_IMAGE:$SHORT_SHA
+      - --region=$_LOCATION
+      - --platform=managed
+      - --port=8000
+      - --timeout=300s
+      - --memory=512Mi
+      - --cpu=1
+      - --min-instances=0
+      - --max-instances=3
+      - --concurrency=80
+      - --set-env-vars=BOT_ENABLED=false
+      - --allow-unauthenticated
+      - --quiet
+substitutions:
+  _LOCATION: europe-west1
+  _AR_IMAGE: ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/newvision/backend
+options:
+  logging: CLOUD_LOGGING_ONLY
