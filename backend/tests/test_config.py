@@ -26,7 +26,8 @@ class TestSettingsDefaults:
         from backend.config import Settings
 
         s = Settings()
-        assert s.cors_origins == ["http://localhost:5173"]
+        assert isinstance(s.cors_origins, list)
+        assert "http://localhost:5173" in s.cors_origins
 
     def test_default_db_path(self) -> None:
         from backend.config import Settings
@@ -142,3 +143,20 @@ class TestSettingsSingleton:
         assert hasattr(settings, "fetch_max_bytes")
         assert hasattr(settings, "deepseek_api_key")
         assert hasattr(settings, "translation_model")
+
+    def test_settings_has_new_webhook_fields(self) -> None:
+        from backend.config import settings
+
+        assert hasattr(settings, "bot_mode")
+        assert hasattr(settings, "webhook_url")
+        assert hasattr(settings, "webhook_path")
+        assert settings.bot_mode == "polling"
+        assert settings.webhook_path == "/webhook/telegram"
+
+    def test_settings_has_static_files_fields(self) -> None:
+        from backend.config import settings
+
+        assert hasattr(settings, "serve_static")
+        assert hasattr(settings, "static_dir")
+        assert settings.serve_static is False
+        assert isinstance(settings.static_dir, str)

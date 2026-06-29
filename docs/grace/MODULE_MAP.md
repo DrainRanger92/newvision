@@ -35,16 +35,23 @@ modules:
   - name: main
     layer: Presentation
     file: backend/main.py
-    depends_on: [config, db, models, parser, translator, bot]
-    responsibility: "FastAPI application assembly and endpoint routing"
+    depends_on: [config, db, models, parser, translator, bot, webhook]
+    responsibility: "FastAPI application assembly and endpoint routing; lifespan routes bot between polling and webhook modes"
     contract: "All endpoints return valid JSON; /health always 200"
 
   - name: bot
     layer: Presentation
     file: backend/bot.py
     depends_on: [config, parser, db, models]
-    responsibility: "Telegram bot: /start, URL → parse → WebApp button"
-    contract: "URL messages return WebAppInfo button; non-URL messages return help text"
+    responsibility: "Telegram bot: /start, URL → parse → WebApp button, polling + webhook lifecycle helpers"
+    contract: "URL messages return WebAppInfo button; non-URL messages return help text; register_webhook/delete_webhook manage Cloud Run mode"
+
+  - name: webhook
+    layer: Presentation
+    file: backend/webhook.py
+    depends_on: [bot]
+    responsibility: "FastAPI router receiving Telegram Updates and feeding them to the aiogram dispatcher"
+    contract: "POST /webhook/telegram returns {status: ok} after feeding update to dispatcher"
 
   - name: parser
     layer: Application
@@ -87,9 +94,11 @@ edges:
   - {from: main,    to: config,    type: configures-from}
   - {from: main,    to: db,        type: initialises}
   - {from: main,    to: bot,       type: starts-polling}
+  - {from: main,    to: webhook,   type: mounts-router}
   - {from: main,    to: parser,    type: calls}
   - {from: main,    to: translator, type: calls}
   - {from: main,    to: models,    type: uses}
+  - {from: webhook, to: bot,       type: feeds-update}
   - {from: bot,     to: config,    type: reads-settings}
   - {from: bot,     to: parser,    type: calls}
   - {from: bot,     to: db,        type: caches-through}
@@ -122,10 +131,12 @@ edges:
   main ──┬──→ config  (configures-from)
           ├──→ db      (initialises)
           ├──→ bot     (starts-polling)
+          ├──→ webhook (mounts-router)
           ├──→ parser  (calls)
           ├──→ translator (calls)
           └──→ models  (uses)
 
+  webhook ──→ bot     (feeds-update)
   bot ──┬──→ config  (reads-settings)
         ├──→ parser  (calls)
         ├──→ db      (caches-through)
@@ -153,8 +164,9 @@ edges:
 
 | Module | Layer | File | Dependencies |
 |--------|-------|------|-------------|
-| main | Presentation | `backend/main.py` | config, db, models, parser, translator, bot |
-| bot | Presentation | `backend/bot.py` | config, parser, db, models |
+| main | Presentation | `backend/main.py` | config, db, models, parser, translator, bot, webhook |
+  | bot | Presentation | `backend/bot.py` | config, parser, db, models |
+  | webhook | Presentation | `backend/webhook.py` | bot |
 | parser | Application | `backend/parser.py` | models, config |
 | translator | Application | `backend/translator.py` | models, db |
 | models | Domain | `backend/models.py` | (none) |

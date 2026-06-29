@@ -4,14 +4,16 @@
 
 import asyncio
 import logging
+import os
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from backend.bot import start_bot_polling
+from backend.bot import delete_webhook, register_webhook, start_bot_polling
 from backend.config import settings
 from backend.db import close_db, get_article_by_id, get_article_by_url, init_db, save_article
 from backend.models import (
@@ -26,6 +28,8 @@ from backend.models import (
 )
 from backend.parser import ParseError, parse_article
 from backend.translator import TranslationError, translate_block, translate_blocks_batch
+from backend.webhook import router as webhook_router
+from backend.webhook import shutdown_webhook_singletons
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,14 +40,35 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan: route bot startup/shutdown by settings.bot_mode."""
     await init_db(settings.db_path)
-    bot_task = asyncio.create_task(start_bot_polling())
+
+    webhook_bot = None
+    if settings.bot_mode == "polling":
+        bot_task = asyncio.create_task(start_bot_polling())
+        logger.info("[Main] Bot mode: polling")
+    else:
+        try:
+            webhook_bot = await register_webhook()
+        except Exception:
+            logger.exception("[Main] Failed to register webhook")
+            webhook_bot = None
+        logger.info("[Main] Bot mode: webhook")
+
     yield
-    bot_task.cancel()
-    try:
-        await bot_task
-    except asyncio.CancelledError:
-        pass
+
+    if settings.bot_mode == "polling":
+        bot_task.cancel()
+        try:
+            await bot_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("[Main] Polling stopped.")
+    else:
+        await delete_webhook(webhook_bot)
+        await shutdown_webhook_singletons()
+        logger.info("[Main] Webhook removed.")
+
     await close_db()
 
 
@@ -60,6 +85,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Webhook router — always mounted; only receives updates when webhook is registered
+# with Telegram. Lifespan handles registration on startup, removal on shutdown.
+# Note: include_router outside lifespan is intentional — FastAPI reads routes at
+# request time, not frozen at app creation, so this works identically either way.
+app.include_router(webhook_router)
+
+# Serve frontend static files (production mode)
+# Mounted after API routes intentionally: Starlette checks regular routes BEFORE
+# mounted apps, so /api/* endpoints take priority over the SPA catch-all.
+if settings.serve_static:
+    static_path = settings.static_dir
+    if os.path.isdir(static_path):
+        app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
+        logger.info("[Main] Serving static files from %s", static_path)
+    else:
+        logger.warning("[Main] Static directory '%s' not found, skipping", static_path)
 
 
 @app.get("/health")
