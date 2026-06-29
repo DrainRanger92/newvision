@@ -31,9 +31,9 @@ async def _get_bot_and_dispatcher() -> tuple[Bot, object]:
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request) -> dict[str, str]:
     """Receive a Telegram Update and feed it into the aiogram dispatcher."""
-    payload = await request.json()
-    update = Update.model_validate(payload, context={"bot": _bot})
     bot, dp = await _get_bot_and_dispatcher()
+    payload = await request.json()
+    update = Update.model_validate(payload, context={"bot": bot})
     await dp.feed_webhook_update(bot, update)
     logger.info("[Webhook] Processed update_id=%s", update.update_id)
     return {"status": "ok"}
