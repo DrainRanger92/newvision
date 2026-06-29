@@ -30,8 +30,8 @@ steps:
       - --min-instances=0
       - --max-instances=3
       - --concurrency=80
-      - --set-env-vars=BOT_ENABLED=false
-      - --set-secrets=DEEPSEEK_API_KEY=DEEPSEEK_API_KEY_SECRET:latest,BOT_TOKEN=BOT_TOKEN_SECRET:latest
+      - --set-env-vars=BOT_MODE=webhook,SERVE_STATIC=true
+      - --set-secrets=DEEPSEEK_API_KEY=deepseek-api-key:latest,BOT_TOKEN=bot-token:latest
       - --allow-unauthenticated
       - --quiet
 substitutions:
