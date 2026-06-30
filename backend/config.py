@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     bot_token: str = ""
     bot_enabled: bool = False
-    mini_app_url: str = "http://localhost:5173"
+    webapp_url: str = ""
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:8000",
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Static files
     serve_static: bool = False
     static_dir: str = "frontend/dist"
+
+    @property
+    def mini_app_url(self) -> str:
+        return self.webapp_url or "http://localhost:5173"
 
 
 settings = Settings()
