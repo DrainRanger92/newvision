@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     bot_mode: str = "polling"  # "polling" | "webhook"
     webhook_url: str = ""
     webhook_path: str = "/webhook/telegram"
+    webhook_secret: str = ""
 
     # Static files
     serve_static: bool = False

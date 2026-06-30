@@ -36,7 +36,7 @@ async def telegram_webhook(request: Request) -> JSONResponse:
     """Receive a Telegram Update and feed it into the aiogram dispatcher."""
     # Verify secret token (Telegram sends X-Telegram-Bot-Api-Secret-Token)
     secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-    if secret_token != settings.bot_token:
+    if secret_token != settings.webhook_secret:
         logger.warning("[Webhook] Invalid or missing secret token")
         return JSONResponse(status_code=403, content={"status": "error", "detail": "invalid secret token"})
 

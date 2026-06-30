@@ -138,7 +138,7 @@ async def register_webhook() -> Bot | None:
     _webhook_bot = create_bot()
     await _webhook_bot.set_webhook(
         full_url,
-        secret_token=settings.bot_token,
+        secret_token=settings.webhook_secret,
         drop_pending_updates=False,
     )
     logger.info("[Bot] Webhook registered: %s", full_url)
