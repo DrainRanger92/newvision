@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.bot import delete_webhook, register_webhook, start_bot_polling
 from backend.config import settings
 from backend.db import close_db, get_article_by_id, get_article_by_url, init_db, save_article
+from backend.logutil import logerror, logexception
 from backend.models import (
     Article,
     BatchTranslateRequest,
@@ -50,8 +51,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         try:
             webhook_bot = await register_webhook()
-        except Exception:
-            logger.exception("[Main] Failed to register webhook")
+        except Exception as e:
+            logexception(
+                logger, "main", "WEBHOOK_LIFESPAN_FAILED",
+                "Unhandled exception during webhook registration in lifespan",
+                bot_mode=settings.bot_mode,
+            )
             webhook_bot = None
         logger.info("[Main] Bot mode: webhook")
 
@@ -65,8 +70,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             pass
         logger.info("[Main] Polling stopped.")
     else:
-        await delete_webhook(webhook_bot)
-        await shutdown_webhook_singletons()
+        try:
+            await delete_webhook(webhook_bot)
+        except Exception as e:
+            logexception(
+                logger, "main", "WEBHOOK_DELETE_LIFESPAN_FAILED",
+                "Error during webhook cleanup in lifespan shutdown",
+            )
+        try:
+            await shutdown_webhook_singletons()
+        except Exception as e:
+            logexception(
+                logger, "main", "SINGLETON_SHUTDOWN_FAILED",
+                "Error during webhook singleton cleanup in lifespan shutdown",
+            )
         logger.info("[Main] Webhook removed.")
 
     await close_db()
