@@ -31,7 +31,7 @@ steps:
       - --max-instances=3
       - --concurrency=80
       - --set-env-vars=BOT_MODE=webhook,SERVE_STATIC=true,BOT_ENABLED=true,WEBAPP_URL=https://newvision-backend-280105212513.europe-west1.run.app
-      - --set-secrets=DEEPSEEK_API_KEY=***_KEY-key:latest,BOT_TOKEN=bot-token:latest
+      - --set-secrets=DEEPSEEK_API_KEY=deepseek-api-key:latest,BOT_TOKEN=bot-token:latest
       - --allow-unauthenticated
       - --quiet
 substitutions:
