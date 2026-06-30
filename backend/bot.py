@@ -150,12 +150,12 @@ async def register_webhook() -> Bot | None:
             logger, "bot", "WEBHOOK_SECRET_MISSING",
             "WEBHOOK_SECRET is empty — webhook cannot be registered",
             level=logging.WARNING,
-            webhook_url=settings.webhook_url,
+            webhook_url=settings.effective_webhook_url,
             webhook_path=settings.webhook_path,
         )
         return None
 
-    if not settings.webhook_url:
+    if not settings.effective_webhook_url:
         logevent(
             logger, "bot", "WEBHOOK_URL_MISSING",
             "WEBHOOK_URL is empty — webhook cannot be registered",
@@ -164,7 +164,7 @@ async def register_webhook() -> Bot | None:
         )
         return None
 
-    full_url = urljoin(settings.webhook_url.rstrip("/") + "/", settings.webhook_path.lstrip("/"))
+    full_url = urljoin(settings.effective_webhook_url.rstrip("/") + "/", settings.webhook_path.lstrip("/"))
     _webhook_bot = create_bot()
     try:
         await _webhook_bot.set_webhook(
