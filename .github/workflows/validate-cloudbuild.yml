@@ -6,6 +6,7 @@ on:
       - 'cloudbuild.yaml'
       - 'backend/Dockerfile'
       - '.dockerignore'
+      - '.github/scripts/validate-cloudbuild.py'
 
 jobs:
   validate:
@@ -13,42 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate cloudbuild.yaml syntax
-        run: |
-          python3 -c "
-import yaml, sys
-with open('cloudbuild.yaml') as f:
-    config = yaml.safe_load(f)
-# Verify critical sections
-assert 'steps' in config, 'Missing steps'
-assert len(config['steps']) >= 2, 'Need at least build + push steps'
-assert 'substitutions' in config, 'Missing substitutions'
-print('cloudbuild.yaml: valid')
-"
+      - name: Install dependencies
+        run: pip install pyyaml
 
-      - name: Validate Dockerfile syntax
-        run: |
-          python3 -c "
-with open('backend/Dockerfile') as f:
-    content = f.read()
-assert 'FROM' in content, 'Dockerfile missing FROM'
-assert 'CMD' in content or 'ENTRYPOINT' in content, 'Dockerfile missing CMD/ENTRYPOINT'
-assert 'COPY' in content, 'Dockerfile missing COPY'
-print('Dockerfile: valid')
-"
-
-      - name: Check substitution vars are hardcoded
-        run: |
-          python3 -c "
-import re
-with open('cloudbuild.yaml') as f:
-    content = f.read()
-# Substitution VALUES should NOT contain \${} references (Cloud Build nesting limitation)
-subs_section = content.split('substitutions:')[1] if 'substitutions:' in content else ''
-nested_vars = re.findall(r':\s*\$\{[^}]+\}', subs_section)
-if nested_vars:
-    print(f'WARNING: Substitution values contain nested variable references: {nested_vars}')
-    print('These will NOT be expanded by Cloud Build!')
-    exit(1)
-print('No nested substitution variables found: OK')
-"
+      - name: Validate cloudbuild.yaml + Dockerfile
+        run: python3 .github/scripts/validate-cloudbuild.py
