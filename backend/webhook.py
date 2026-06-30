@@ -15,6 +15,8 @@ from backend.logutil import logerror, logexception, logsecure
 
 logger = logging.getLogger(__name__)
 
+router = APIRouter()
+
 # Bot is created by register_webhook() in bot.py — singletons shared via get_webhook_bot()
 _dispatcher: Dispatcher | None = None
 
