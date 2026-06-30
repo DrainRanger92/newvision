@@ -11,6 +11,7 @@ from aiogram.types import Update
 
 from backend.bot import create_dispatcher, get_webhook_bot
 from backend.config import settings
+from backend.logutil import logevent
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +37,52 @@ async def telegram_webhook(request: Request) -> JSONResponse:
     """Receive a Telegram Update and feed it into the aiogram dispatcher."""
     # Verify secret token (Telegram sends X-Telegram-Bot-Api-Secret-Token)
     secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-    if secret_token != settings.bot_token:
-        logger.warning("[Webhook] Invalid or missing secret token")
+    if secret_token != settings.webhook_secret:
+        secret_present = secret_token is not None
+        logevent(
+            logger, "webhook", "SECRET_MISMATCH",
+            "Rejected webhook request with incorrect or missing secret token",
+            security=True,
+            secret_present=str(secret_present),
+            remote_ip=request.client.host if request.client else "unknown",
+        )
         return JSONResponse(status_code=403, content={"status": "error", "detail": "invalid secret token"})
 
     bot, dp = await _get_bot_and_dispatcher()
+
     try:
         payload = await request.json()
-    except ValueError:
-        logger.warning("[Webhook] Invalid JSON payload received")
+    except ValueError as e:
+        logevent(
+            logger, "webhook", "INVALID_JSON",
+            "Received non-JSON payload on webhook endpoint",
+            error=str(e),
+            content_length=request.headers.get("content-length", "0"),
+        )
         return JSONResponse(status_code=400, content={"status": "error", "detail": "invalid json"})
 
-    update = Update.model_validate(payload, context={"bot": bot})
-    await dp.feed_webhook_update(bot, update)
+    try:
+        update = Update.model_validate(payload, context={"bot": bot})
+    except Exception:
+        logevent(
+            logger, "webhook", "UPDATE_VALIDATE_FAILED",
+            "Failed to validate Telegram Update model",
+            exc_info=True,
+            update_id=payload.get("update_id", "unknown"),
+        )
+        return JSONResponse(status_code=422, content={"status": "error", "detail": "invalid update"})
+
+    try:
+        await dp.feed_webhook_update(bot, update)
+    except Exception:
+        logevent(
+            logger, "webhook", "UPDATE_PROCESS_FAILED",
+            "aiogram dispatcher raised exception while processing update",
+            exc_info=True,
+            update_id=update.update_id,
+        )
+        return JSONResponse(status_code=500, content={"status": "error", "detail": "processing failed"})
+
     logger.info("[Webhook] Processed update_id=%s", update.update_id)
     return JSONResponse(content={"status": "ok"})
 
@@ -57,8 +91,22 @@ async def shutdown_webhook_singletons() -> None:
     """Close the bot session and shut down the dispatcher."""
     global _bot, _dispatcher
     if _dispatcher is not None:
-        await _dispatcher.shutdown()
+        try:
+            await _dispatcher.shutdown()
+        except Exception:
+            logevent(
+                logger, "webhook", "DISPATCHER_SHUTDOWN_FAILED",
+                "Error shutting down aiogram dispatcher",
+                exc_info=True,
+            )
     if _bot is not None:
-        await _bot.session.close()
+        try:
+            await _bot.session.close()
+        except Exception:
+            logevent(
+                logger, "webhook", "BOT_SESSION_CLOSE_FAILED",
+                "Error closing bot aiohttp session",
+                exc_info=True,
+            )
     _bot = None
     _dispatcher = None

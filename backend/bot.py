@@ -12,6 +12,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, W
 
 from backend.config import settings
 from backend.db import get_article_by_url, save_article
+from backend.logutil import logevent
 from backend.models import Article
 from backend.parser import ParseError, parse_article
 
@@ -61,7 +62,11 @@ async def handle_message(message: Message) -> None:
         try:
             raw_html, title, blocks = await parse_article(url)
         except ParseError as e:
-            logger.warning("[Bot] Parse failed for %s: %s", url, e)
+            logevent(
+                logger, "bot", "PARSE_FAILED",
+                "Failed to parse article URL from bot message",
+                url=url, error=str(e),
+            )
             await message.answer(f"Failed to parse article: {e}")
             return
 
@@ -104,7 +109,12 @@ async def start_bot_polling() -> None:
         return
 
     if not settings.bot_token:
-        logger.warning("[Bot] BOT_TOKEN is empty. Bot will not start.")
+        logevent(
+            logger, "bot", "TOKEN_MISSING",
+            "BOT_TOKEN is empty — bot cannot start in polling mode",
+            level=logging.WARNING,
+            bot_enabled=str(settings.bot_enabled),
+        )
         return
 
     logger.info("[Bot] Starting bot polling...")
@@ -127,20 +137,52 @@ async def register_webhook() -> Bot | None:
         return None
 
     if not settings.bot_token:
-        logger.warning("[Bot] BOT_TOKEN is empty. Webhook will not be registered.")
+        logevent(
+            logger, "bot", "TOKEN_MISSING",
+            "BOT_TOKEN is empty — webhook cannot be registered",
+            level=logging.WARNING,
+            bot_enabled=str(settings.bot_enabled),
+        )
+        return None
+
+    if not settings.webhook_secret:
+        logevent(
+            logger, "bot", "WEBHOOK_SECRET_MISSING",
+            "WEBHOOK_SECRET is empty — webhook cannot be registered",
+            level=logging.WARNING,
+            webhook_url=settings.webhook_url,
+            webhook_path=settings.webhook_path,
+        )
         return None
 
     if not settings.webhook_url:
-        logger.warning("[Bot] WEBHOOK_URL is empty. Webhook will not be registered.")
+        logevent(
+            logger, "bot", "WEBHOOK_URL_MISSING",
+            "WEBHOOK_URL is empty — webhook cannot be registered",
+            level=logging.WARNING,
+            webhook_secret_present=str(bool(settings.webhook_secret)),
+        )
         return None
 
     full_url = urljoin(settings.webhook_url.rstrip("/") + "/", settings.webhook_path.lstrip("/"))
     _webhook_bot = create_bot()
-    await _webhook_bot.set_webhook(
-        full_url,
-        secret_token=settings.bot_token,
-        drop_pending_updates=False,
-    )
+    try:
+        await _webhook_bot.set_webhook(
+            full_url,
+            secret_token=settings.webhook_secret,
+            drop_pending_updates=False,
+        )
+    except Exception as e:
+        logevent(
+            logger, "bot", "WEBHOOK_SET_FAILED",
+            "Telegram API rejected webhook registration",
+            exc_info=True,
+            full_url=full_url,
+            error=str(e),
+        )
+        _webhook_bot = None
+        return None
+
     logger.info("[Bot] Webhook registered: %s", full_url)
     return _webhook_bot
 
@@ -153,6 +195,13 @@ async def delete_webhook(bot: Bot | None) -> None:
     try:
         await bot.delete_webhook()
         logger.info("[Bot] Webhook deleted.")
+    except Exception as e:
+        logevent(
+            logger, "bot", "WEBHOOK_DELETE_FAILED",
+            "Failed to delete Telegram webhook during shutdown",
+            exc_info=True,
+            error=str(e),
+        )
     finally:
         await bot.session.close()
     _webhook_bot = None
