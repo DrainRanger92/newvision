@@ -36,5 +36,9 @@ class Settings(BaseSettings):
     def mini_app_url(self) -> str:
         return self.webapp_url or "http://localhost:5173"
 
+    @property
+    def effective_webhook_url(self) -> str:
+        return self.webhook_url or self.webapp_url
+
 
 settings = Settings()
