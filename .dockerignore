@@ -10,7 +10,6 @@ __pycache__/
 venv/
 env/
 node_modules/
-frontend/
 docs/
 gates/
 scripts/
