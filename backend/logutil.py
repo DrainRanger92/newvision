@@ -1,39 +1,40 @@
 """
 # @module: logutil
 
-Structured error logging with GCP Logs Explorer compatibility.
+Structured event logging with GCP Logs Explorer compatibility.
 
 Usage:
-    from backend.logutil import logerror, logexception
+    from backend.logutil import logevent
 
-    try:
-        result = await risky_operation()
-    except Exception as e:
-        logexception(LOGGER, "webhook", "UPDATE_PROCESS_FAILED",
-                     "Failed to process Telegram update",
-                     update_id=update_id, bot_token_present=bool(bot_token))
-        raise
+    logevent(logger, "bot", "PARSE_FAILED",
+             "Failed to parse article URL from bot message",
+             url=url, error=str(e))
 
-    if not valid:
-        logerror(LOGGER, "webhook", "INVALID_SECRET",
-                 "Rejected request with invalid secret token",
-                 remote_ip=client_ip, path=request.url.path)
+    logevent(logger, "bot", "TOKEN_MISSING",
+             "BOT_TOKEN is empty — bot cannot start",
+             level=logging.WARNING, bot_enabled=str(settings.bot_enabled))
+
+    logevent(logger, "webhook", "SECRET_MISMATCH",
+             "Rejected webhook request with incorrect secret token",
+             security=True, remote_ip=client_ip)
 """
 
 import logging
-import sys
-import traceback
 from typing import Any
 
 
-def logerror(
+def logevent(
     logger: logging.Logger,
     module: str,
     event: str,
     message: str,
+    *,
+    level: int = logging.ERROR,
+    exc_info: bool = False,
+    security: bool = False,
     **extra: Any,
 ) -> None:
-    """Log a structured error event (ERROR level).
+    """Log a structured event with semantic anchor and optional context.
 
     Args:
         logger: Logger instance (use module-level LOGGER).
@@ -42,75 +43,32 @@ def logerror(
         event: Machine-readable event name in SCREAMING_SNAKE_CASE
                (e.g. "UPDATE_PARSE_FAILED", "SECRET_MISMATCH").
         message: Human-readable description of what happened.
+        level: Logging level (default ERROR). Use logging.WARNING for
+               non-critical configuration or operational issues.
+        exc_info: If True, includes full traceback (use inside except blocks).
+        security: If True, logs at WARNING with "SECURITY: " prefix for
+                  easy filtering of security-related events in GCP Logs Explorer.
         extra: Additional structured context fields (strings, ints, bools).
                Values are stringified for safe logging.
     """
     fields = " | ".join(f"{k}={v}" for k, v in extra.items())
-    logger.error(
-        "[%s] %s | event=%s%s",
-        module,
-        message,
-        event,
-        f" | {fields}" if fields else "",
-    )
+    suffix = f" | {fields}" if fields else ""
 
-
-def logexception(
-    logger: logging.Logger,
-    module: str,
-    event: str,
-    message: str,
-    exc_info: bool = True,
-    **extra: Any,
-) -> None:
-    """Log an exception with full traceback (ERROR level).
-
-    Use this inside except blocks where you want to log the traceback.
-
-    Args:
-        logger: Logger instance.
-        module: Module name for [ModuleName] semantic anchor.
-        event: Machine-readable event name in SCREAMING_SNAKE_CASE.
-        message: Human-readable description.
-        exc_info: If True (default), includes full traceback.
-        extra: Additional structured context fields.
-    """
-    fields = " | ".join(f"{k}={v}" for k, v in extra.items())
-    logger.error(
-        "[%s] %s | event=%s%s",
-        module,
-        message,
-        event,
-        f" | {fields}" if fields else "",
-        exc_info=exc_info,
-    )
-
-
-def logsecure(
-    logger: logging.Logger,
-    module: str,
-    event: str,
-    message: str,
-    **extra: Any,
-) -> None:
-    """Log a security-related event (WARNING level, but with SECURITY prefix).
-
-    Security events (auth failures, token mismatches, rate limiting) are
-    logged at WARNING level to avoid alert fatigue, but include the SECURITY
-    prefix for easy filtering in GCP Logs Explorer.
-
-    Args:
-        logger: Logger instance.
-        module: Module name for [ModuleName] semantic anchor.
-        event: Machine-readable event name in SCREAMING_SNAKE_CASE.
-        message: Human-readable description.
-        extra: Additional structured context fields.
-    """
-    fields = " | ".join(f"{k}={v}" for k, v in extra.items())
-    logger.warning(
-        "[%s] SECURITY: %s | event=%s%s",
-        module,
-        message,
-        event,
-        f" | {fields}" if fields else "",
-    )
+    if security:
+        logger.warning(
+            "[%s] SECURITY: %s | event=%s%s",
+            module,
+            message,
+            event,
+            suffix,
+        )
+    else:
+        logger.log(
+            level,
+            "[%s] %s | event=%s%s",
+            module,
+            message,
+            event,
+            suffix,
+            exc_info=exc_info,
+        )
