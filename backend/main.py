@@ -112,17 +112,6 @@ app.add_middleware(
 # request time, not frozen at app creation, so this works identically either way.
 app.include_router(webhook_router)
 
-# Serve frontend static files (production mode)
-# Mounted after API routes intentionally: Starlette checks regular routes BEFORE
-# mounted apps, so /api/* endpoints take priority over the SPA catch-all.
-if settings.serve_static:
-    static_path = settings.static_dir
-    if os.path.isdir(static_path):
-        app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
-        logger.info("[Main] Serving static files from %s", static_path)
-    else:
-        logger.warning("[Main] Static directory '%s' not found, skipping", static_path)
-
 
 @app.get("/health")
 async def health() -> dict[str, str]:
@@ -242,3 +231,16 @@ async def api_translate_batch(req: BatchTranslateRequest) -> BatchTranslateRespo
     ]
 
     return BatchTranslateResponse(translations=translations)
+
+
+# Serve frontend static files (production mode)
+# IMPORTANT: Mount AFTER all API routes. Starlette checks mounts in registration
+# order, so if mounted BEFORE @app routes, the StaticFiles at "/" catches ALL
+# requests and API endpoints never get reached.
+if settings.serve_static:
+    static_path = settings.static_dir
+    if os.path.isdir(static_path):
+        app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
+        logger.info("[Main] Serving static files from %s", static_path)
+    else:
+        logger.warning("[Main] Static directory '%s' not found, skipping", static_path)
