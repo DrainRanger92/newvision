@@ -130,6 +130,10 @@ async def register_webhook() -> Bot | None:
         logger.warning("[Bot] BOT_TOKEN is empty. Webhook will not be registered.")
         return None
 
+    if not settings.webhook_secret:
+        logger.warning("[Bot] WEBHOOK_SECRET is empty. Webhook will not be registered.")
+        return None
+
     if not settings.webhook_url:
         logger.warning("[Bot] WEBHOOK_URL is empty. Webhook will not be registered.")
         return None
