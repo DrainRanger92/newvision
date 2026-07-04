@@ -103,7 +103,7 @@ export async function fetchBlockTranslation(
   blockIndex: number
 ): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  const timeoutId = setTimeout(() => controller.abort(), 35_000);
 
   try {
     const response = await fetch(`${API_BASE}/translate`, {
@@ -134,7 +134,7 @@ export async function fetchBlockTranslationBatch(
   if (blockIndices.length === 0) return [];
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  const timeoutId = setTimeout(() => controller.abort(), 35_000);
 
   try {
     const response = await fetch(`${API_BASE}/translate/batch`, {
