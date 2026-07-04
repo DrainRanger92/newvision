@@ -89,24 +89,17 @@ async def telegram_webhook(request: Request) -> JSONResponse:
 
 async def shutdown_webhook_singletons() -> None:
     """Close the bot session and shut down the dispatcher."""
-    global _bot, _dispatcher
+    global _dispatcher
     if _dispatcher is not None:
         try:
-            await _dispatcher.shutdown()
+            _dispatcher.shutdown()
         except Exception:
             logevent(
                 logger, "webhook", "DISPATCHER_SHUTDOWN_FAILED",
                 "Error shutting down aiogram dispatcher",
                 exc_info=True,
             )
-    if _bot is not None:
-        try:
-            await _bot.session.close()
-        except Exception:
-            logevent(
-                logger, "webhook", "BOT_SESSION_CLOSE_FAILED",
-                "Error closing bot aiohttp session",
-                exc_info=True,
-            )
-    _bot = None
-    _dispatcher = None
+    # Bot singleton is managed by bot.py (get_webhook_bot / delete_webhook)
+    # No _bot variable in this module — bot lifecycle is in bot.py
+    if _dispatcher is not None:
+        _dispatcher = None
