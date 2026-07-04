@@ -280,6 +280,46 @@ class TestTranslateText:
         finally:
             backend.translator.AsyncOpenAI = original
 
+    @pytest.mark.asyncio
+    async def test_translate_text_uses_30s_timeout(self, mock_openai_client: MagicMock) -> None:
+        """translate_text creates httpx.AsyncClient with timeout=30.0."""
+        with patch("backend.translator.httpx.AsyncClient") as mock_http_cls:
+            http_client = AsyncMock()
+            http_client.aclose = AsyncMock()
+            mock_http_cls.return_value = http_client
+
+            await translate_text("Hello", "sk-test")
+
+            call_kwargs = mock_http_cls.call_args[1]
+            timeout = call_kwargs["timeout"]
+            assert timeout.connect == 3.0
+            assert timeout.read == 30.0
+            assert timeout.write == 30.0
+            assert timeout.pool == 30.0
+
+    @pytest.mark.asyncio
+    async def test_translate_text_calls_logevent_on_error(self, mock_openai_client: MagicMock) -> None:
+        """When translate_text fails, logevent is called."""
+        mock_openai_client.chat.completions.create = AsyncMock(side_effect=Exception("API error"))
+
+        with (
+            patch("backend.translator.httpx.AsyncClient") as mock_http_cls,
+            patch("backend.translator.logevent") as mock_logevent_fn,
+        ):
+            http_client = AsyncMock()
+            http_client.aclose = AsyncMock()
+            mock_http_cls.return_value = http_client
+
+            with pytest.raises(TranslationError):
+                await translate_text("Hello", "sk-test")
+
+            mock_logevent_fn.assert_called_once()
+            args, kwargs = mock_logevent_fn.call_args
+            assert args[1] == "translator"
+            assert args[2] == "TRANSLATE_TEXT_FAILED"
+            assert kwargs["exc_info"] is True
+            assert kwargs["error"] == "API error"
+
 
 # ── translate_block (mocked) ───────────────────────────────────────────
 
