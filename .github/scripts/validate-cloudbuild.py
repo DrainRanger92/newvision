@@ -47,6 +47,37 @@ else:
     if 'COPY' not in df_content:
         errors.append('Dockerfile missing COPY instruction')
 
+
+# 4. Validate port consistency between cloudbuild.yaml and Dockerfile
+dockerfile_port = None
+with open('backend/Dockerfile') as f:
+    for line in f:
+        match = re.search(r'EXPOSE\s+(\d+)', line)
+        if match:
+            dockerfile_port = match.group(1)
+            break
+
+cloudbuild_port = None
+with open('cloudbuild.yaml') as f:
+    for line in f:
+        match = re.search(r'--port=(\d+)', line)
+        if match:
+            cloudbuild_port = match.group(1)
+            break
+
+if dockerfile_port and cloudbuild_port:
+    if dockerfile_port != cloudbuild_port:
+        errors.append(
+            f'Port mismatch: Dockerfile EXPOSE {dockerfile_port} != cloudbuild.yaml --port={cloudbuild_port}. '
+            f'Both must use the same port for Cloud Run startup probe to pass.'
+        )
+    else:
+        print(f'Port check: Dockerfile EXPOSE {dockerfile_port} == cloudbuild.yaml --port={cloudbuild_port}: OK')
+elif not dockerfile_port:
+    errors.append('Dockerfile missing EXPOSE <port>')
+elif not cloudbuild_port:
+    errors.append('cloudbuild.yaml missing --port=<N> in deploy step')
+
 # Report
 if errors:
     print('VALIDATION FAILED:')
