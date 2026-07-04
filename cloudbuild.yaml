@@ -23,7 +23,7 @@ steps:
       - --image=$_AR_IMAGE:$SHORT_SHA
       - --region=$_LOCATION
       - --platform=managed
-      - --port=8000
+      - --port=8080
       - --timeout=300s
       - --memory=512Mi
       - --cpu=1
