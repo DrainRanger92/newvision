@@ -10,6 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 from openai import AsyncOpenAI
 
+from backend.logutil import logevent
 from backend.models import Block, CodeBlock, HeadingBlock, ImageBlock, ListBlock, ParagraphBlock, QuoteBlock
 
 logger = logging.getLogger(__name__)
@@ -93,7 +94,7 @@ def _build_batch_prompt(texts: list[str]) -> list[dict]:
 
 
 async def translate_text(text: str, api_key: str, model: str = "deepseek-chat") -> str:
-    http_client = httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0))
+    http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=3.0))
     try:
         client = AsyncOpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, http_client=http_client)
         response = await client.chat.completions.create(
@@ -106,7 +107,7 @@ async def translate_text(text: str, api_key: str, model: str = "deepseek-chat") 
             raise TranslationError("LLM returned empty response")
         return content
     except Exception as e:
-        logger.warning("[Translator] translate_text failed: %s", e)
+        logevent(logger, "translator", "TRANSLATE_TEXT_FAILED", "translate_text failed", exc_info=True, error=str(e))
         raise TranslationError(str(e)) from e
     finally:
         await http_client.aclose()
@@ -141,7 +142,7 @@ async def translate_block(
     try:
         translated = await translate_text(plain_text, api_key, model)
     except TranslationError:
-        logger.warning("[Translator] Translation failed for article=%s block=%d", article_id, block_index)
+        logevent(logger, "translator", "TRANSLATION_FAILED", "Translation failed for block", exc_info=True, article_id=article_id, block_index=block_index)
         restored = _restore_code_tags(text_with_placeholders, codes)
         return restored, False, True
 
@@ -207,7 +208,7 @@ async def translate_blocks_batch(
         for i, (idx, block, plain_text, text_hash, codes) in enumerate(to_translate):
             translated_text = parsed.get(i, "")
             if not translated_text:
-                logger.warning("[Translator] Batch parse missing block %d, falling back", idx)
+                logevent(logger, "translator", "BATCH_PARSE_MISSING_BLOCK", "Batch parse missing block, falling back", level=logging.WARNING, block_index=idx)
                 try:
                     translated_text = await translate_text(plain_text, api_key, model)
                 except TranslationError:
