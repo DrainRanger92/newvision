@@ -12,8 +12,6 @@ import type { Block, HeadingBlock, ListBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import { useTranslation } from "../hooks/useTranslation";
 
-const COLLAPSE_DURATION_MS = 300;
-
 interface CurtainBlockProps {
   articleId: string;
   blockIndex: number;
@@ -74,7 +72,7 @@ export default function CurtainBlock({
   const [error, setError] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [collapsing, setCollapsing] = useState(false);
-  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const collapsingRef = useRef(false);
   const { getTranslation } = useTranslation();
 
   const handleToggle = useCallback(async () => {
@@ -82,19 +80,12 @@ export default function CurtainBlock({
       const el = contentRef.current;
       if (el) {
         el.style.maxHeight = `${el.scrollHeight}px`;
+        collapsingRef.current = true;
         setCollapsing(true);
         requestAnimationFrame(() => {
           el.style.maxHeight = "0";
         });
       }
-      if (collapseTimerRef.current !== null) {
-        clearTimeout(collapseTimerRef.current);
-      }
-      collapseTimerRef.current = setTimeout(() => {
-        collapseTimerRef.current = null;
-        setExpanded(false);
-        setCollapsing(false);
-      }, COLLAPSE_DURATION_MS);
       return;
     }
 
@@ -115,11 +106,19 @@ export default function CurtainBlock({
   }, [expanded, translationText, articleId, blockIndex, getTranslation]);
 
   useEffect(() => {
-    return () => {
-      if (collapseTimerRef.current !== null) {
-        clearTimeout(collapseTimerRef.current);
+    const el = contentRef.current;
+    if (!el) return;
+
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.propertyName === "max-height" && collapsingRef.current) {
+        collapsingRef.current = false;
+        setExpanded(false);
+        setCollapsing(false);
       }
     };
+
+    el.addEventListener("transitionend", onTransitionEnd);
+    return () => el.removeEventListener("transitionend", onTransitionEnd);
   }, []);
 
   useEffect(() => {
@@ -148,7 +147,11 @@ export default function CurtainBlock({
           aria-expanded={expanded}
           type="button"
         >
-          🌐
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
         </button>
         <div className="block-content">{renderBlockContent(block)}</div>
       </div>

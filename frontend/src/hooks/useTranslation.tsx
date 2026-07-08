@@ -24,7 +24,8 @@ interface TranslationContextValue {
   isTranslating: (articleId: string, blockIndex: number) => boolean;
   preloadTranslations: (
     articleId: string,
-    indices: number[]
+    indices: number[],
+    signal?: AbortSignal
   ) => Promise<void>;
 }
 
@@ -78,7 +79,11 @@ export function TranslationProvider({
   );
 
   const preloadTranslations = useCallback(
-    async (articleId: string, indices: number[]): Promise<void> => {
+    async (
+      articleId: string,
+      indices: number[],
+      signal?: AbortSignal
+    ): Promise<void> => {
       const uncached = indices.filter((i) => {
         const key = `${articleId}:${i}`;
         return !cache.current.has(key) && !pending.current.has(key);
@@ -87,7 +92,12 @@ export function TranslationProvider({
       if (uncached.length === 0) return;
 
       try {
-        const texts = await fetchBlockTranslationBatch(articleId, uncached);
+        const texts = await fetchBlockTranslationBatch(
+          articleId,
+          uncached,
+          signal
+        );
+        if (signal?.aborted) return;
         texts.forEach((text, j) => {
           const blockIndex = uncached[j];
           if (blockIndex !== undefined) {
@@ -95,6 +105,7 @@ export function TranslationProvider({
           }
         });
       } catch {
+        if (signal?.aborted) return;
         uncached.forEach((i) => {
           cache.current.set(`${articleId}:${i}`, ERROR_MARKER);
         });
@@ -125,6 +136,8 @@ export function useBatchPrefetch(
   const { preloadTranslations } = useTranslation();
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const translatableIndices: number[] = [];
     blocks.forEach((block, index) => {
       if (isTranslatable(block)) {
@@ -142,8 +155,10 @@ export function useBatchPrefetch(
         if (idx !== undefined) chunk.push(idx);
       }
       if (chunk.length > 0) {
-        preloadTranslations(articleId, chunk);
+        preloadTranslations(articleId, chunk, controller.signal);
       }
     }
+
+    return () => controller.abort();
   }, [articleId, blocks, preloadTranslations]);
 }
