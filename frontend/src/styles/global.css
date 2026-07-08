@@ -225,72 +225,83 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ── Curtain ── */
+/* ── Translatable Block ── */
 
-.curtain-container {
+.translatable-block {
   position: relative;
-  overflow: hidden;
-  touch-action: pan-y;
-  user-select: none;
-  -webkit-user-select: none;
-  contain: layout style paint;
-  min-height: 44px;
 }
 
-.curtain-original {
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+.translatable-row {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
 }
 
-.curtain-translation {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  max-height: 400px;
-  overflow-y: auto;
-  opacity: 0;
-  font-size: inherit;
-  line-height: inherit;
-  color: var(--tg-hint-color, #999999);
-  font-style: italic;
-  transition: opacity 200ms ease-out;
+.translate-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  margin-top: 4px;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 150ms ease, transform 150ms ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.curtain-translation.visible {
+.translate-icon:hover,
+.translate-icon.active {
   opacity: 1;
 }
 
-.curtain-spinner {
+.translate-icon.active {
+  transform: scale(1.1);
+}
+
+.block-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.translation-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 300ms ease-out;
+  margin-left: 36px;
+}
+
+.translation-inner {
+  padding: 4px 0 12px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--tg-hint-color, #999999);
+  font-style: italic;
+}
+
+.translation-spinner {
   width: 1.2rem;
   height: 1.2rem;
   border: 2px solid var(--tg-secondary-bg-color, #f0f0f0);
   border-top-color: var(--tg-link-color, #2481cc);
   border-radius: 50%;
-  animation: curtain-spin 0.6s linear infinite;
+  animation: translation-spin 0.6s linear infinite;
   margin: 0.5rem auto;
 }
 
-@keyframes curtain-spin {
+@keyframes translation-spin {
   to { transform: rotate(360deg); }
 }
 
-.curtain-error {
+.translation-error {
   color: var(--tg-error-color, #e74c3c);
   font-style: italic;
   font-size: 0.9rem;
-}
-
-/* ── Swipe Hint ── */
-
-.swipe-hint {
-  text-align: center;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--tg-hint-color, #999999);
-  background-color: var(--tg-secondary-bg-color, #f0f0f0);
-  border-radius: 0.5rem;
-  animation: fadeIn 300ms ease-out;
 }

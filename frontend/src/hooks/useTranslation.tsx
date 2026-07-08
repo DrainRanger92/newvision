@@ -5,11 +5,19 @@
  * Deduplicates in-flight requests. Error responses cached.
  */
 
-import React, { createContext, useContext, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import {
   fetchBlockTranslation,
   fetchBlockTranslationBatch,
+  isTranslatable,
 } from "../services/api";
+import type { Block } from "../services/api";
 
 interface TranslationContextValue {
   getTranslation: (articleId: string, blockIndex: number) => Promise<string>;
@@ -23,6 +31,7 @@ interface TranslationContextValue {
 const TranslationContext = createContext<TranslationContextValue | null>(null);
 
 const ERROR_MARKER = "[translation error]";
+const BATCH_SIZE = 10;
 
 export function TranslationProvider({
   children,
@@ -80,7 +89,10 @@ export function TranslationProvider({
       try {
         const texts = await fetchBlockTranslationBatch(articleId, uncached);
         texts.forEach((text, j) => {
-          cache.current.set(`${articleId}:${uncached[j]}`, text);
+          const blockIndex = uncached[j];
+          if (blockIndex !== undefined) {
+            cache.current.set(`${articleId}:${blockIndex}`, text);
+          }
         });
       } catch {
         uncached.forEach((i) => {
@@ -104,4 +116,34 @@ export function useTranslation(): TranslationContextValue {
     throw new Error("useTranslation must be used within TranslationProvider");
   }
   return ctx;
+}
+
+export function useBatchPrefetch(
+  articleId: string,
+  blocks: Block[]
+): void {
+  const { preloadTranslations } = useTranslation();
+
+  useEffect(() => {
+    const translatableIndices: number[] = [];
+    blocks.forEach((block, index) => {
+      if (isTranslatable(block)) {
+        translatableIndices.push(index);
+      }
+    });
+
+    if (translatableIndices.length === 0) return;
+
+    for (let i = 0; i < translatableIndices.length; i += BATCH_SIZE) {
+      const chunk: number[] = [];
+      const end = Math.min(i + BATCH_SIZE, translatableIndices.length);
+      for (let j = i; j < end; j++) {
+        const idx = translatableIndices[j];
+        if (idx !== undefined) chunk.push(idx);
+      }
+      if (chunk.length > 0) {
+        preloadTranslations(articleId, chunk);
+      }
+    }
+  }, [articleId, blocks, preloadTranslations]);
 }
