@@ -27,7 +27,7 @@ steps:
       - --timeout=300s
       - --memory=512Mi
       - --cpu=1
-      - --min-instances=0
+      - --min-instances=1
       - --max-instances=3
       - --concurrency=80
       - --set-env-vars=BOT_MODE=webhook,SERVE_STATIC=true,BOT_ENABLED=true,WEBAPP_URL=https://newvision-backend-280105212513.europe-west1.run.app,WEBHOOK_URL=https://newvision-backend-280105212513.europe-west1.run.app
