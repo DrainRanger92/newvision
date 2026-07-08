@@ -12,6 +12,8 @@ import type { Block, HeadingBlock, ListBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import { useTranslation } from "../hooks/useTranslation";
 
+const COLLAPSE_DURATION_MS = 300;
+
 interface CurtainBlockProps {
   articleId: string;
   blockIndex: number;
@@ -72,6 +74,7 @@ export default function CurtainBlock({
   const [error, setError] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [collapsing, setCollapsing] = useState(false);
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { getTranslation } = useTranslation();
 
   const handleToggle = useCallback(async () => {
@@ -81,13 +84,17 @@ export default function CurtainBlock({
         el.style.maxHeight = `${el.scrollHeight}px`;
         setCollapsing(true);
         requestAnimationFrame(() => {
-          if (el) el.style.maxHeight = "0";
+          el.style.maxHeight = "0";
         });
       }
-      setTimeout(() => {
+      if (collapseTimerRef.current !== null) {
+        clearTimeout(collapseTimerRef.current);
+      }
+      collapseTimerRef.current = setTimeout(() => {
+        collapseTimerRef.current = null;
         setExpanded(false);
         setCollapsing(false);
-      }, 300);
+      }, COLLAPSE_DURATION_MS);
       return;
     }
 
@@ -108,13 +115,19 @@ export default function CurtainBlock({
   }, [expanded, translationText, articleId, blockIndex, getTranslation]);
 
   useEffect(() => {
+    return () => {
+      if (collapseTimerRef.current !== null) {
+        clearTimeout(collapseTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!expanded || collapsing) return;
     const el = contentRef.current;
     if (!el) return;
     const frame = requestAnimationFrame(() => {
-      if (el) {
-        el.style.maxHeight = `${el.scrollHeight}px`;
-      }
+      el.style.maxHeight = `${el.scrollHeight}px`;
     });
     return () => cancelAnimationFrame(frame);
   }, [expanded, collapsing, translationText, loading, error]);
