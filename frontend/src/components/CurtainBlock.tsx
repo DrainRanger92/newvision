@@ -2,15 +2,14 @@
  * # @module: CurtainBlock
  *
  * Visual curtain component for translatable article blocks.
- * Two-layer structure: original (slides up) + translation (fades in).
- * Uses useCurtain for gesture handling and useTranslation for cache.
+ * Icon-trigger (🌐) in left margin expands/collapses translation inline.
+ * Uses useTranslation for cache and lazy fetch.
  */
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DOMPurify from "dompurify";
 import type { Block, HeadingBlock, ListBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
-import { useCurtain, SNAP_DURATION_MS } from "../hooks/useCurtain";
 import { useTranslation } from "../hooks/useTranslation";
 
 interface CurtainBlockProps {
@@ -67,78 +66,111 @@ export default function CurtainBlock({
   blockIndex,
   block,
 }: CurtainBlockProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [blockHeight, setBlockHeight] = useState(100);
+  const [expanded, setExpanded] = useState(false);
   const [translationText, setTranslationText] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [collapsing, setCollapsing] = useState(false);
+  const collapsingRef = useRef(false);
   const { getTranslation } = useTranslation();
 
+  const handleToggle = useCallback(async () => {
+    if (expanded) {
+      const el = contentRef.current;
+      if (el) {
+        el.style.maxHeight = `${el.scrollHeight}px`;
+        collapsingRef.current = true;
+        setCollapsing(true);
+        requestAnimationFrame(() => {
+          el.style.maxHeight = "0";
+        });
+      }
+      return;
+    }
+
+    setExpanded(true);
+
+    if (translationText !== null) return;
+
+    setLoading(true);
+    setError(false);
+    try {
+      const text = await getTranslation(articleId, blockIndex);
+      setTranslationText(text);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [expanded, translationText, articleId, blockIndex, getTranslation]);
+
   useEffect(() => {
-    const el = containerRef.current;
+    const el = contentRef.current;
     if (!el) return;
 
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const h = entry.contentRect.height;
-        if (h > 0) setBlockHeight(h);
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.propertyName === "max-height" && collapsingRef.current) {
+        collapsingRef.current = false;
+        setExpanded(false);
+        setCollapsing(false);
       }
+    };
+
+    el.addEventListener("transitionend", onTransitionEnd);
+    return () => el.removeEventListener("transitionend", onTransitionEnd);
+  }, []);
+
+  useEffect(() => {
+    if (!expanded || collapsing) return;
+    const el = contentRef.current;
+    if (!el) return;
+    const frame = requestAnimationFrame(() => {
+      el.style.maxHeight = `${el.scrollHeight}px`;
     });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleOpen = useCallback(async () => {
-    const text = await getTranslation(articleId, blockIndex);
-    setTranslationText(text);
-  }, [articleId, blockIndex, getTranslation]);
-
-  const handleClose = useCallback(() => {
-    // Cached translation stays; just close visual
-  }, []);
-
-  const { curtainProps, state, offset, isOpen } = useCurtain(
-    blockHeight,
-    handleOpen,
-    handleClose
-  );
-
-  const showTranslation = state === "loaded" && translationText !== null;
-  const showSpinner = state === "loading";
-  const showError = state === "error";
+    return () => cancelAnimationFrame(frame);
+  }, [expanded, collapsing, translationText, loading, error]);
 
   if (!isTranslatable(block)) {
     return <>{renderBlockContent(block)}</>;
   }
 
+  const showContent = expanded || collapsing;
+
   return (
-    <div
-      ref={containerRef}
-      className="curtain-container"
-      data-curtain-block=""
-      data-block-index={blockIndex}
-      {...curtainProps}
-    >
-      <div
-        className="curtain-original"
-        style={{
-          transform: `translateY(-${offset}px) translateZ(0)`,
-          transition:
-            offset === 0 || isOpen
-              ? `transform ${SNAP_DURATION_MS}ms ease-out`
-              : "none",
-        }}
-      >
-        {renderBlockContent(block)}
+    <div className="translatable-block">
+      <div className="translatable-row">
+        <button
+          className={`translate-icon ${expanded ? "active" : ""}`}
+          onClick={handleToggle}
+          aria-label={expanded ? "Hide translation" : "Show translation"}
+          aria-expanded={expanded}
+          type="button"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+        </button>
+        <div className="block-content">{renderBlockContent(block)}</div>
       </div>
       <div
-        className={`curtain-translation ${isOpen ? "visible" : ""}`}
-        aria-hidden={!isOpen}
+        ref={contentRef}
+        className="translation-content"
+        aria-hidden={!expanded}
       >
-        {showSpinner && <div className="curtain-spinner" />}
-        {showError && (
-          <p className="curtain-error">Translation unavailable</p>
+        {showContent && (
+          <div className="translation-inner">
+            {loading && <div className="translation-spinner" />}
+            {error && (
+              <p className="translation-error">Translation unavailable</p>
+            )}
+            {translationText !== null && !loading && (
+              <p>{translationText}</p>
+            )}
+          </div>
         )}
-        {showTranslation && <p>{translationText}</p>}
       </div>
     </div>
   );

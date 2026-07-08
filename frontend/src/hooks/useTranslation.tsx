@@ -5,24 +5,34 @@
  * Deduplicates in-flight requests. Error responses cached.
  */
 
-import React, { createContext, useContext, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import {
   fetchBlockTranslation,
   fetchBlockTranslationBatch,
+  isTranslatable,
 } from "../services/api";
+import type { Block } from "../services/api";
 
 interface TranslationContextValue {
   getTranslation: (articleId: string, blockIndex: number) => Promise<string>;
   isTranslating: (articleId: string, blockIndex: number) => boolean;
   preloadTranslations: (
     articleId: string,
-    indices: number[]
+    indices: number[],
+    signal?: AbortSignal
   ) => Promise<void>;
 }
 
 const TranslationContext = createContext<TranslationContextValue | null>(null);
 
 const ERROR_MARKER = "[translation error]";
+const BATCH_SIZE = 10;
 
 export function TranslationProvider({
   children,
@@ -69,7 +79,11 @@ export function TranslationProvider({
   );
 
   const preloadTranslations = useCallback(
-    async (articleId: string, indices: number[]): Promise<void> => {
+    async (
+      articleId: string,
+      indices: number[],
+      signal?: AbortSignal
+    ): Promise<void> => {
       const uncached = indices.filter((i) => {
         const key = `${articleId}:${i}`;
         return !cache.current.has(key) && !pending.current.has(key);
@@ -78,11 +92,20 @@ export function TranslationProvider({
       if (uncached.length === 0) return;
 
       try {
-        const texts = await fetchBlockTranslationBatch(articleId, uncached);
+        const texts = await fetchBlockTranslationBatch(
+          articleId,
+          uncached,
+          signal
+        );
+        if (signal?.aborted) return;
         texts.forEach((text, j) => {
-          cache.current.set(`${articleId}:${uncached[j]}`, text);
+          const blockIndex = uncached[j];
+          if (blockIndex !== undefined) {
+            cache.current.set(`${articleId}:${blockIndex}`, text);
+          }
         });
       } catch {
+        if (signal?.aborted) return;
         uncached.forEach((i) => {
           cache.current.set(`${articleId}:${i}`, ERROR_MARKER);
         });
@@ -104,4 +127,38 @@ export function useTranslation(): TranslationContextValue {
     throw new Error("useTranslation must be used within TranslationProvider");
   }
   return ctx;
+}
+
+export function useBatchPrefetch(
+  articleId: string,
+  blocks: Block[]
+): void {
+  const { preloadTranslations } = useTranslation();
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const translatableIndices: number[] = [];
+    blocks.forEach((block, index) => {
+      if (isTranslatable(block)) {
+        translatableIndices.push(index);
+      }
+    });
+
+    if (translatableIndices.length === 0) return;
+
+    for (let i = 0; i < translatableIndices.length; i += BATCH_SIZE) {
+      const chunk: number[] = [];
+      const end = Math.min(i + BATCH_SIZE, translatableIndices.length);
+      for (let j = i; j < end; j++) {
+        const idx = translatableIndices[j];
+        if (idx !== undefined) chunk.push(idx);
+      }
+      if (chunk.length > 0) {
+        preloadTranslations(articleId, chunk, controller.signal);
+      }
+    }
+
+    return () => controller.abort();
+  }, [articleId, blocks, preloadTranslations]);
 }

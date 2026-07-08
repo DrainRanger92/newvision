@@ -4,15 +4,15 @@
  * Renders article blocks, routing translatable blocks
  * (heading h2-h6, paragraph, list, quote) through CurtainBlock
  * and non-translatable blocks (code, image) directly.
- * Integrates preloading via IntersectionObserver sentinel.
+ * Triggers batch prefetch on article load.
  */
 
 import type { Article, Block, HeadingBlock } from "../services/api";
 import { isTranslatable } from "../services/api";
 import CurtainBlock from "./CurtainBlock";
-import SwipeHint from "./SwipeHint";
-import { usePreload } from "../hooks/usePreload";
 import { useTranslation } from "../hooks/useTranslation";
+import { useBatchPrefetch } from "../hooks/useTranslation";
+import { usePreload } from "../hooks/usePreload";
 
 interface Props {
   article: Article;
@@ -25,6 +25,8 @@ function isTitleBlock(block: Block): boolean {
 export default function ArticleRenderer({ article }: Props) {
   const { preloadTranslations } = useTranslation();
 
+  useBatchPrefetch(article.id, article.blocks);
+
   const { sentinelRef } = usePreload(
     article.id,
     article.blocks,
@@ -35,7 +37,6 @@ export default function ArticleRenderer({ article }: Props) {
   return (
     <article className="article">
       <h1 className="article-title">{article.title}</h1>
-      <SwipeHint />
       <div className="article-blocks">
         {article.blocks.map((block, index) => {
           if (isTitleBlock(block)) {

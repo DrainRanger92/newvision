@@ -129,12 +129,16 @@ export async function fetchBlockTranslation(
 
 export async function fetchBlockTranslationBatch(
   articleId: string,
-  blockIndices: number[]
+  blockIndices: number[],
+  signal?: AbortSignal
 ): Promise<string[]> {
   if (blockIndices.length === 0) return [];
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 35_000);
+
+  const onExternalAbort = () => controller.abort();
+  signal?.addEventListener("abort", onExternalAbort, { once: true });
 
   try {
     const response = await fetch(`${API_BASE}/translate/batch`, {
@@ -155,5 +159,6 @@ export async function fetchBlockTranslationBatch(
     return data.translations.map((t) => t.translated_text);
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener("abort", onExternalAbort);
   }
 }
