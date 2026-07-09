@@ -4,11 +4,11 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "8000:8000"
+      - "8080:8080"
     env_file:
       - backend/.env
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 3
