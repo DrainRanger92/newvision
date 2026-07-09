@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.bot import delete_webhook, register_webhook, start_bot_polling
+from backend.bot import register_webhook, start_bot_polling
 from backend.config import settings
 from backend.db import close_db, get_article_by_id, get_article_by_url, init_db, save_article
 from backend.logutil import logevent
@@ -71,14 +71,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             pass
         logger.info("[Main] Polling stopped.")
     else:
-        try:
-            await delete_webhook(webhook_bot)
-        except Exception:
-            logevent(
-                logger, "main", "WEBHOOK_DELETE_LIFESPAN_FAILED",
-                "Error during webhook cleanup in lifespan shutdown",
-                exc_info=True,
-            )
+        # Webhook MUST persist across instance restarts.
+        # Telegram overwrites on re-registration — no need to delete on shutdown.
+        # Deleting on shutdown creates a gap where the bot cannot receive updates.
         try:
             await shutdown_webhook_singletons()
         except Exception:
@@ -87,7 +82,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "Error during webhook singleton cleanup in lifespan shutdown",
                 exc_info=True,
             )
-        logger.info("[Main] Webhook removed.")
 
     await close_db()
 
