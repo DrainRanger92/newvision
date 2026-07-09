@@ -74,6 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Webhook MUST persist across instance restarts.
         # Telegram overwrites on re-registration — no need to delete on shutdown.
         # Deleting on shutdown creates a gap where the bot cannot receive updates.
+        _ = webhook_bot  # singleton kept alive; skip F841
         try:
             await shutdown_webhook_singletons()
         except Exception:
