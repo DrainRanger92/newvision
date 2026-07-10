@@ -8,13 +8,19 @@ from urllib.parse import urljoin, urlparse
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    WebAppInfo,
+)
 
 from backend.config import settings
 from backend.db import get_article_by_url, save_article
 from backend.logutil import logevent
 from backend.models import Article
 from backend.parser import ParseError, parse_article
+from backend.summarizer import summarize_article
 
 logger = logging.getLogger(__name__)
 
@@ -56,40 +62,56 @@ async def handle_message(message: Message) -> None:
         await message.answer("Please send a valid URL.")
         return
 
+    placeholder = await message.answer("Reading the article...")
+
     article = await get_article_by_url(url)
     if article is None:
-        await message.answer("Parsing article, please wait...")
         try:
             raw_html, title, blocks = await parse_article(url)
         except ParseError as e:
             logevent(
-                logger, "bot", "PARSE_FAILED",
+                logger,
+                "bot",
+                "PARSE_FAILED",
                 "Failed to parse article URL from bot message",
-                url=url, error=str(e),
+                url=url,
+                error=str(e),
             )
-            await message.answer(f"Failed to parse article: {e}")
+            await placeholder.edit_text(f"Failed to parse article: {e}")
             return
 
         article = Article(url=url, title=title, blocks=blocks)
         await save_article(article, raw_html)
         logger.info("[Bot] Parsed and saved article %s: %s", article.id, url)
 
+    summary_text = ""
+    if settings.deepseek_api_key:
+        summary, _cached, error = await summarize_article(
+            article.id,
+            settings.deepseek_api_key,
+            settings.translation_model,
+        )
+        if not error:
+            summary_text = summary
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Open in NewVision",
-                    web_app=WebAppInfo(url=f"{settings.mini_app_url}/#/reader/{article.id}"),
+                    text="\U0001f4d6 Читать полностью",
+                    web_app=WebAppInfo(
+                        url=f"{settings.mini_app_url}/#/reader/{article.id}"
+                    ),
                 )
             ]
         ]
     )
 
-    await message.answer(
-        f"<b>{article.title}</b>\n\nChoose how to read:",
-        reply_markup=keyboard,
-        parse_mode="HTML",
-    )
+    display_text = f"<b>{article.title}</b>"
+    if summary_text:
+        display_text += f"\n\n{summary_text}"
+
+    await placeholder.edit_text(display_text, reply_markup=keyboard, parse_mode="HTML")
 
 
 def create_bot() -> Bot:
@@ -110,7 +132,9 @@ async def start_bot_polling() -> None:
 
     if not settings.bot_token:
         logevent(
-            logger, "bot", "TOKEN_MISSING",
+            logger,
+            "bot",
+            "TOKEN_MISSING",
             "BOT_TOKEN is empty — bot cannot start in polling mode",
             level=logging.WARNING,
             bot_enabled=str(settings.bot_enabled),
@@ -133,12 +157,16 @@ async def register_webhook() -> Bot | None:
     global _webhook_bot
 
     if not settings.bot_enabled:
-        logger.info("[Bot] Bot is disabled (BOT_ENABLED=false). Skipping webhook registration.")
+        logger.info(
+            "[Bot] Bot is disabled (BOT_ENABLED=false). Skipping webhook registration."
+        )
         return None
 
     if not settings.bot_token:
         logevent(
-            logger, "bot", "TOKEN_MISSING",
+            logger,
+            "bot",
+            "TOKEN_MISSING",
             "BOT_TOKEN is empty — webhook cannot be registered",
             level=logging.WARNING,
             bot_enabled=str(settings.bot_enabled),
@@ -147,7 +175,9 @@ async def register_webhook() -> Bot | None:
 
     if not settings.webhook_secret:
         logevent(
-            logger, "bot", "WEBHOOK_SECRET_MISSING",
+            logger,
+            "bot",
+            "WEBHOOK_SECRET_MISSING",
             "WEBHOOK_SECRET is empty — webhook cannot be registered",
             level=logging.WARNING,
             webhook_url=settings.effective_webhook_url,
@@ -157,14 +187,19 @@ async def register_webhook() -> Bot | None:
 
     if not settings.effective_webhook_url:
         logevent(
-            logger, "bot", "WEBHOOK_URL_MISSING",
+            logger,
+            "bot",
+            "WEBHOOK_URL_MISSING",
             "WEBHOOK_URL is empty — webhook cannot be registered",
             level=logging.WARNING,
             webhook_secret_present=str(bool(settings.webhook_secret)),
         )
         return None
 
-    full_url = urljoin(settings.effective_webhook_url.rstrip("/") + "/", settings.webhook_path.lstrip("/"))
+    full_url = urljoin(
+        settings.effective_webhook_url.rstrip("/") + "/",
+        settings.webhook_path.lstrip("/"),
+    )
     _webhook_bot = create_bot()
     try:
         await _webhook_bot.set_webhook(
@@ -174,7 +209,9 @@ async def register_webhook() -> Bot | None:
         )
     except Exception as e:
         logevent(
-            logger, "bot", "WEBHOOK_SET_FAILED",
+            logger,
+            "bot",
+            "WEBHOOK_SET_FAILED",
             "Telegram API rejected webhook registration",
             exc_info=True,
             full_url=full_url,
@@ -197,7 +234,9 @@ async def delete_webhook(bot: Bot | None) -> None:
         logger.info("[Bot] Webhook deleted.")
     except Exception as e:
         logevent(
-            logger, "bot", "WEBHOOK_DELETE_FAILED",
+            logger,
+            "bot",
+            "WEBHOOK_DELETE_FAILED",
             "Failed to delete Telegram webhook during shutdown",
             exc_info=True,
             error=str(e),
