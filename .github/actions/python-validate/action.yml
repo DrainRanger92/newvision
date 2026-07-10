@@ -9,6 +9,10 @@ runs:
         python-version: '3.11'
         cache: 'pip'
 
+    - name: Install system dependencies for lxml
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-dev libxslt-dev
+      shell: bash
+
     - name: Install dependencies
       run: pip install -r backend/requirements.txt
       shell: bash
