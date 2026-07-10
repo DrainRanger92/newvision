@@ -35,7 +35,7 @@ modules:
   - name: main
     layer: Presentation
     file: backend/main.py
-    depends_on: [config, db, models, parser, translator, bot, webhook]
+    depends_on: [config, db, models, parser, translator, summarizer, bot, webhook]
     responsibility: "FastAPI application assembly and endpoint routing; lifespan routes bot between polling and webhook modes"
     contract: "All endpoints return valid JSON; /health always 200"
 
@@ -111,6 +111,7 @@ edges:
   - {from: main,    to: webhook,   type: mounts-router}
   - {from: main,    to: parser,    type: calls}
   - {from: main,    to: translator, type: calls}
+  - {from: main,    to: summarizer, type: calls}
   - {from: main,    to: models,    type: uses}
   - {from: webhook, to: bot,       type: feeds-update}
   - {from: bot,     to: config,    type: reads-settings}
@@ -146,13 +147,14 @@ edges:
 **Dependency Direction**: arrows point from consumer → dependency.
 
 ```
-  main ──┬──→ config  (configures-from)
-          ├──→ db      (initialises)
-          ├──→ bot     (starts-polling)
-          ├──→ webhook (mounts-router)
-          ├──→ parser  (calls)
-          ├──→ translator (calls)
-          └──→ models  (uses)
+  main ──┬──→ config      (configures-from)
+          ├──→ db          (initialises)
+          ├──→ bot         (starts-polling)
+          ├──→ webhook     (mounts-router)
+          ├──→ parser      (calls)
+          ├──→ translator  (calls)
+          ├──→ summarizer  (calls)
+          └──→ models      (uses)
 
   webhook ──→ bot     (feeds-update)
   bot ──┬──→ config  (reads-settings)
@@ -182,7 +184,7 @@ edges:
 
 | Module | Layer | File | Dependencies |
 |--------|-------|------|-------------|
-| main | Presentation | `backend/main.py` | config, db, models, parser, translator, bot, webhook |
+| main | Presentation | `backend/main.py` | config, db, models, parser, translator, summarizer, bot, webhook |
   | bot | Presentation | `backend/bot.py` | config, parser, db, models |
   | webhook | Presentation | `backend/webhook.py` | bot |
 | parser | Application | `backend/parser.py` | models, config |
