@@ -67,6 +67,20 @@ modules:
     responsibility: "LLM EN→RU block translation with caching"
     contract: "Writes to cache; returns (text, cached, error) tuple"
 
+  - name: article_text
+    layer: Application
+    file: backend/article_text.py
+    depends_on: [models]
+    responsibility: "Article text assembly from blocks: build_full_text and build_summary_context"
+    contract: "build_summary_context never exceeds max_chars; heading levels preserved; image blocks skipped"
+
+  - name: summarizer
+    layer: Application
+    file: backend/summarizer.py
+    depends_on: [models, db, article_text]
+    responsibility: "LLM EN→RU article summarization with caching"
+    contract: "Returns (summary, cached, error) tuple; cache-first"
+
   - name: models
     layer: Domain
     file: backend/models.py
@@ -109,6 +123,10 @@ edges:
   - {from: parser,     to: config, type: reads-settings}
   - {from: translator, to: models, type: type-gates}
   - {from: translator, to: db,    type: caches-through}
+  - {from: article_text, to: models, type: uses}
+  - {from: summarizer, to: models, type: uses}
+  - {from: summarizer, to: db,    type: caches-through}
+  - {from: summarizer, to: article_text, type: calls}
 
   # Data → Domain
   - {from: db,      to: models,    type: serialises}
