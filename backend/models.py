@@ -107,3 +107,14 @@ class TranslateResponse(BaseModel):
 
 class BatchTranslateResponse(BaseModel):
     translations: list[TranslateResponse]
+
+
+class SummarizeRequest(BaseModel):
+    article_id: str
+
+
+class SummarizeResponse(BaseModel):
+    article_id: str
+    summary: str | None = None
+    cached: bool = False
+    error: bool = False

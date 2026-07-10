@@ -22,6 +22,8 @@ from backend.models import (
     ParagraphBlock,
     ParseRequest,
     QuoteBlock,
+    SummarizeRequest,
+    SummarizeResponse,
     TranslateRequest,
     TranslateResponse,
 )
@@ -315,6 +317,51 @@ class TestBatchTranslateResponse:
     def test_empty_list(self) -> None:
         resp = BatchTranslateResponse(translations=[])
         assert resp.translations == []
+
+
+# ── SummarizeRequest / SummarizeResponse ────────────────────────────────
+
+
+class TestSummarizeRequest:
+    """SummarizeRequest: article_id required."""
+
+    def test_valid(self) -> None:
+        req = SummarizeRequest(article_id="abc-123")
+        assert req.article_id == "abc-123"
+
+    def test_article_id_required(self) -> None:
+        with pytest.raises(ValidationError):
+            SummarizeRequest()  # type: ignore[call-arg]
+
+
+class TestSummarizeResponse:
+    """SummarizeResponse: summary optional, cached/error default False."""
+
+    def test_defaults(self) -> None:
+        resp = SummarizeResponse(article_id="abc-123")
+        assert resp.summary is None
+        assert resp.cached is False
+        assert resp.error is False
+
+    def test_with_summary(self) -> None:
+        resp = SummarizeResponse(article_id="abc-123", summary="Short summary.")
+        assert resp.summary == "Short summary."
+
+    def test_explicit_error(self) -> None:
+        resp = SummarizeResponse(article_id="abc-123", error=True)
+        assert resp.error is True
+        assert resp.summary is None
+
+    def test_json_round_trip(self) -> None:
+        import json
+
+        original = SummarizeResponse(article_id="abc-123", summary="Test", cached=True)
+        data = json.loads(original.model_dump_json())
+        restored = SummarizeResponse(**data)
+        assert restored.article_id == original.article_id
+        assert restored.summary == original.summary
+        assert restored.cached == original.cached
+        assert restored.error == original.error
 
 
 # ── Serialisation round-trip ───────────────────────────────────────────
