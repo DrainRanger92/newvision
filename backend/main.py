@@ -24,10 +24,13 @@ from backend.models import (
     Block,
     BlockType,
     ParseRequest,
+    SummarizeRequest,
+    SummarizeResponse,
     TranslateRequest,
     TranslateResponse,
 )
 from backend.parser import ParseError, parse_article
+from backend.summarizer import summarize_article
 from backend.translator import TranslationError, translate_block, translate_blocks_batch
 from backend.webhook import router as webhook_router
 from backend.webhook import shutdown_webhook_singletons
@@ -226,6 +229,29 @@ async def api_translate_batch(req: BatchTranslateRequest) -> BatchTranslateRespo
     ]
 
     return BatchTranslateResponse(translations=translations)
+
+
+@app.post("/api/summarize")
+async def api_summarize(req: SummarizeRequest) -> SummarizeResponse:
+    article = await get_article_by_id(req.article_id)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    logger.info("[Summarizer] POST /api/summarize article=%s", req.article_id)
+
+    summary, cached, error = await summarize_article(
+        req.article_id, settings.deepseek_api_key, settings.translation_model,
+    )
+
+    if error:
+        raise HTTPException(status_code=503, detail="Summarization service unavailable")
+
+    return SummarizeResponse(
+        article_id=req.article_id,
+        summary=summary,
+        cached=cached,
+        error=error,
+    )
 
 
 # Serve frontend static files (production mode)
