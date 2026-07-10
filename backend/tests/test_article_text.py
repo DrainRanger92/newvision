@@ -2,8 +2,6 @@
 Tests for backend/article_text.py — build_full_text and build_summary_context.
 """
 
-import pytest
-
 from backend.models import (
     CodeBlock,
     HeadingBlock,
