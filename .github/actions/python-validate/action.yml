@@ -9,18 +9,22 @@ runs:
         python-version: '3.11'
         cache: 'pip'
 
+    - name: Install system dependencies for lxml
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-dev libxslt-dev
+      shell: bash
+
     - name: Install dependencies
       run: pip install -r backend/requirements.txt
       shell: bash
 
-    - name: G-python-imports — Check backend can be imported
+    - name: G-python-imports
       run: PYTHONPATH=backend python -c "from backend.main import app; print('OK')"
       shell: bash
 
-    - name: G-python-lint — Ruff linting
+    - name: G-python-lint
       run: cd backend && ruff check .
       shell: bash
 
-    - name: G-python-tests — Run pytest
+    - name: G-python-tests
       run: cd backend && python -m pytest tests/ -v --tb=short
       shell: bash
