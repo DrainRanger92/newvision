@@ -213,6 +213,67 @@ class TestSaveTranslation:
         mock_db.commit.assert_awaited_once()
 
 
+class TestGetSummary:
+    """Retrieve cached summary."""
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_not_found(self, mock_db: MagicMock) -> None:
+        cursor = MagicMock()
+        cursor.fetchone = AsyncMock(return_value=None)
+        mock_db.execute.return_value = cursor
+
+        import backend.db
+
+        result = await backend.db.get_summary("article-1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_summary_when_found(self, mock_db: MagicMock) -> None:
+        row = MagicMock()
+        row.__getitem__.side_effect = lambda k: {
+            "summary": "This is a summary of the article.",
+        }[k]
+
+        cursor = MagicMock()
+        cursor.fetchone = AsyncMock(return_value=row)
+        mock_db.execute.return_value = cursor
+
+        import backend.db
+
+        result = await backend.db.get_summary("article-1")
+        assert result == "This is a summary of the article."
+
+    @pytest.mark.asyncio
+    async def test_executes_correct_query(self, mock_db: MagicMock) -> None:
+        cursor = MagicMock()
+        cursor.fetchone = AsyncMock(return_value=None)
+        mock_db.execute.return_value = cursor
+
+        import backend.db
+
+        await backend.db.get_summary("article-1")
+        mock_db.execute.assert_called_with(
+            "SELECT summary FROM summaries WHERE article_id = ?",
+            ("article-1",),
+        )
+
+
+class TestSaveSummary:
+    """Persist summary to database."""
+
+    @pytest.mark.asyncio
+    async def test_saves_summary(self, mock_db: MagicMock) -> None:
+        import backend.db
+
+        await backend.db.save_summary("article-1", "Summary text", "deepseek-chat")
+
+        assert mock_db.execute.called
+        call_args = mock_db.execute.call_args[0][0]
+        assert "INSERT OR REPLACE" in call_args
+        assert "summaries" in call_args
+        mock_db.commit.assert_awaited_once()
+
+
 class TestGetTranslationsBatch:
     """Batch fetch translations."""
 
@@ -307,6 +368,20 @@ class TestUninitializedDbErrors:
 
         with pytest.raises(RuntimeError, match="not initialized"):
             await backend.db.get_translations_batch("a", [0])
+
+    @pytest.mark.asyncio
+    async def test_get_summary_raises(self, mock_db_uninitialized: None) -> None:
+        import backend.db
+
+        with pytest.raises(RuntimeError, match="not initialized"):
+            await backend.db.get_summary("article-1")
+
+    @pytest.mark.asyncio
+    async def test_save_summary_raises(self, mock_db_uninitialized: None) -> None:
+        import backend.db
+
+        with pytest.raises(RuntimeError, match="not initialized"):
+            await backend.db.save_summary("article-1", "summary", "model")
 
 
 class TestRowToArticle:

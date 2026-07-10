@@ -54,6 +54,16 @@ async def init_db(db_path: str) -> None:
     await _db.execute(
         "CREATE INDEX IF NOT EXISTS idx_translations_lookup ON translations(article_id, block_index)"
     )
+    await _db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS summaries (
+            article_id TEXT PRIMARY KEY,
+            summary TEXT NOT NULL,
+            model TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
     await _db.commit()
     logger.info("[DB] Initialized at %s", db_path)
 
@@ -131,6 +141,34 @@ async def save_translation(article_id: str, block_index: int, original_text: str
     )
     await _db.commit()
     logger.info("[DB] Saved translation for article=%s block=%d", article_id, block_index)
+
+
+async def get_summary(article_id: str) -> str | None:
+    if _db is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+    cursor = await _db.execute(
+        "SELECT summary FROM summaries WHERE article_id = ?",
+        (article_id,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+    return row["summary"]
+
+
+async def save_summary(article_id: str, summary: str, model: str) -> None:
+    if _db is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+    created_at = datetime.now(UTC).isoformat()
+    await _db.execute(
+        """
+        INSERT OR REPLACE INTO summaries (article_id, summary, model, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (article_id, summary, model, created_at),
+    )
+    await _db.commit()
+    logger.info("[DB] Saved summary for article=%s", article_id)
 
 
 async def get_translations_batch(article_id: str, block_indices: list[int]) -> dict[int, str]:
